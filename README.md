@@ -1,2 +1,3 @@
-# Games_Hexchess
-An implementation of Glinski chess (and others, later) in C++ and Qt
+# Hexchess
+
+A minimal implementation of Glinski's Hexagonal Chess in C+++, using Qt for GUI implementation.
