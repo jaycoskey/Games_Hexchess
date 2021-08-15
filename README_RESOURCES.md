@@ -9,6 +9,12 @@
   * Glinski, W. First Theories of Hexagonal Chess, Hexagonal Chess Publications, 1974.
   * Pritchard, D. B. The Classified Encyclopedia of Chess Variants, 2nd edition (completed and edited by John Beasley), Published by John Beasley, 2007.
     * Available online at https://www.jsbeasley.co.uk/encyc.htm
+* Game records (PGN):
+  * The records of three games of Glinski chess from the 1999 Europe Hexagonal
+    Chess Championship can be found
+    [here](https://www.chessvariants.com/hexagonal.dir/glinski/europe99.html).
+    Also, Glinski's book, First Theories of Hexagonal Chess (1974), contains
+    the records of two games of Glinski chess.
 * Web:
   * Analysis
     * Endgame analysis of hexagonal chess, by Dave McCooey:
