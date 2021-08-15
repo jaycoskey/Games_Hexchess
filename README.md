@@ -11,19 +11,20 @@ Those who would like to learn more about hexagonal chess can get a decent introd
 [the Wikipedia page on Hexagonal chess](https://en.wikipedia.org/wiki/Hexagonal_chess).
 
 For those who would like to play hexagonal chess:
-  * For play against a computer player, Jocly's [desktop app](https://github.com/mi-g/joclyboard/releases),
-    or the web-based version of their hexagonal chess games, at these URLs:
-    * Flat-top hexagon variants:
-      * [Glinski chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=glinski-chess)
-        (announced by Jocly on 2014-04-07)
-      * [McCooey chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=mccooey-chess)
-      * [Shafran chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=shafran-chess)
-    * Flat-side hexagon variants:
-      * [Brusky chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=brusky-chess)
-      * [De Vasa chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=devasa-chess)
-    * Note: The names of these variants are commonly expressed as possessives. For example,
-      Glinski's chess, McCooey's chess, Shafran's chess, etc.
-  * For play against other opponents around the world:
+  * For play against a computer player:
+    * Jocly's [desktop app](https://github.com/mi-g/joclyboard/releases),
+      or the web-based version of their hexagonal chess games, at these URLs:
+      * Flat-top hexagon variants:
+        * [Glinski chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=glinski-chess)
+          (announced by Jocly on 2014-04-07)
+        * [McCooey chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=mccooey-chess)
+        * [Shafran chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=shafran-chess)
+      * Flat-side hexagon variants:
+        * [Brusky chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=brusky-chess)
+        * [De Vasa chess](https://mi-g.github.io/jocly/examples/browser/control.html?game=devasa-chess)
+      * Note: The names of these variants are commonly expressed as possessives. For example,
+        Glinski's chess, McCooey's chess, etc. I'm dropping the possessives for simplicity.
+  * For either play against the computer or against live opponents around the world:
     * The [Ludii General Game System](https://ludii.games/), which supports those variants that Jocly
       supports (listed above), as well as:
       * Flat-top hexagon variants:
@@ -35,6 +36,9 @@ For those who would like to play hexagonal chess:
             (In the standard rules for Wellisch chess, the player whose King is captured loses, and play
             continues between the other two, with the King-capturing player taking control over the losing
             player's pieces.)
+    * Omnichess at (omnichess.club)[https://www.omnichess.club/], which currently (as of August, 2021)
+      supports Glinski chess and Wellisch Chess, but will likely soon host several more variants,
+      since it hosts a "variant editor", which allows for the easy creation of new chess-like variants.
   * There is also a ["tabletop" version](https://steamcommunity.com/sharedfiles/filedetails/?id=262803646)
     available.
 
