@@ -21,6 +21,7 @@
 #include <bitset>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <ostream>
 #include <vector>
 
@@ -33,6 +34,7 @@ namespace hexchess::core {
 
 /// \brief The index of a board location in a std::bitset or other collection of cells.
 using Index = int;
+using OptIndex = std::optional<Index>;
 
 /// \brief A collection of indices, such as the possible destinations cells of a given Knight.
 using Indices = std::vector<Index>;
@@ -41,6 +43,7 @@ using Size = std::size_t;
 
 /// \brief Any integer that can fit in 16 bits: Moves in a game, size of Zobrish hash table, etc.
 using Short = int;
+using Shorts = std::vector<Short>;
 
 /// \brief One of the two coordinate values of a Cell location.
 ///
@@ -55,6 +58,10 @@ using HexCoord = Short;
 /// For example, the variable that stores the history of "half-moves" counts without
 /// a capture or Pawn move is called nonProgressCounters.
 using HalfMoveCounter = Short;
+
+using PieceValue = int;
+
+using Strings = std::vector<std::string>;
 
 // ========================================
 // Enums
@@ -91,6 +98,7 @@ enum class Color {
     Black,
     White
 };
+inline Color opponent(Color c) { return c == Color::Black ? Color::White : Color::Black; }
 const std::string color_string(Color c);
 inline std::ostream& operator<<(std::ostream& os, Color c) {
     os << color_string(c);
@@ -118,7 +126,9 @@ constexpr PieceType pieceTypes[6] {
     PieceType::Knight,
     PieceType::Pawn
 };
+PieceType piece_type_parse(char ch);
 const std::string piece_type_string(PieceType pt);
+
 inline std::ostream& operator<<(std::ostream& os, PieceType pt) {
     os << piece_type_string(pt);
     return os;
@@ -126,12 +136,16 @@ inline std::ostream& operator<<(std::ostream& os, PieceType pt) {
 
 /// \brief Returns a two-character, upper-case code for each piece, such as BK or WQ.
 ///
-/// The functions fen_string and unicode_string follow different guidelines.
-const std::string piece_string(Color c, PieceType pt);
-const std::string piece_unicode(Color c, PieceType pt);
+const std::pair<Color, PieceType> piece_fen_parse(char ch);
+const std::string piece_fen_string(Color c, PieceType pt);  ///< \brief One character
+const std::string piece_string(Color c, PieceType pt);      ///< \brief Two characters
+const std::string piece_unicode(Color c, PieceType pt);     ///< \brief For printing icons in ASCII
 
-/// \brief Returns a one-characters code: lower case for Black pieces; upper case for White.
-const std::string fen_string(Color c, PieceType pt);
+enum class UiMode {
+    Api,
+    Graphics,
+    Text
+};
 
 /// \brief The different variants of hexagonal chess. (Not all are supported.)
 /// * Flat-top hexagons:

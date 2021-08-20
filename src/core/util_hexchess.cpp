@@ -23,7 +23,6 @@
 #include "util.h"
 #include "util_hexchess.h"
 
-
 using std::string;
 
 
@@ -38,6 +37,18 @@ const string color_string(Color c) {
     return c == Color::Black ? "B" : "W";
 }
 
+PieceType piece_type_parse(char ch) {
+    static std::map<char, PieceType> ch2pt = {
+        { 'K', PieceType::King   },
+        { 'Q', PieceType::Queen  },
+        { 'R', PieceType::Rook   },
+        { 'B', PieceType::Bishop },
+        { 'N', PieceType::Knight },
+        { 'P', PieceType::Pawn   }
+    };
+    return ch2pt[ch];
+}
+
 const string piece_type_string(PieceType pt) {
     static std::map<PieceType, std::string> pt2s = {
         { PieceType::King,   "K" },
@@ -50,9 +61,21 @@ const string piece_type_string(PieceType pt) {
     return pt2s[pt];
 }
 
+/// \brief Return piece indicated character from FEN string
+const std::pair<Color, PieceType> piece_fen_parse(char ch) {
+    Color c = islower(ch) ? Color::Black : Color::White;
+    PieceType pt = piece_type_parse(toupper(ch));
+    return mkPair(c, pt);
+}
+
+/// \brief \todo Modify to avoid narrowing conversion
+const string piece_fen_string(Color c, PieceType pt) {
+    string result = piece_type_string(pt);
+    return c == Color::Black ? string{static_cast<char>(std::tolower(result[0]))} : result;
+}
+
 const string piece_string(Color c, PieceType pt) {
     string result = color_string(c) + piece_type_string(pt);
-    assert(result.size() == 2);
     return result;
 }
 
@@ -102,12 +125,6 @@ const string piece_unicode(Color c, PieceType pt, CellShade cs) {
     result += "\u001b[0m";
 
     return result;
-}
-
-/// \brief \todo Refactor fen_string(Color, PieceType) to avoid narrowing conversion
-const string fen_string(Color c, PieceType pt) {
-    string result = piece_type_string(pt);
-    return c == Color::Black ? string{static_cast<char>(std::tolower(result[0]))} : result;
 }
 
 }  // namespace hexchess::core
