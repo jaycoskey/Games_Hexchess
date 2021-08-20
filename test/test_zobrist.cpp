@@ -16,23 +16,28 @@
 #include <iomanip>
 #include <iostream>
 
+#include "fen.h"
 #include "util_hexchess.h"
 #include "variant.h"
 #include "zobrist.h"
-
 
 using std::cout;
 using std::string;
 
 using hexchess::core::Color;
+using hexchess::core::Fen;
 using hexchess::core::Glinski;
 using hexchess::core::Index;
-using hexchess::core::PiecePlacement;
+using hexchess::core::PiecesSparse;
 using hexchess::core::PieceType;
+using hexchess::core::Size;
 using hexchess::core::ZHash;
 using hexchess::core::ZIndex;
 using hexchess::core::Zobrist;
 
+using hexchess::core::color_string;
+using hexchess::core::piece_fen_string;
+using hexchess::core::piece_type_string;
 using hexchess::core::randomBitstring;
 
 
@@ -46,7 +51,7 @@ void printHexValue(ZHash zh, string end="\n") {
 
 /// \brief Historical: This was used to populate the Zobrist hash table.
 void printRandomBitstrings() {
-    for (int k = 0; k < Zobrist<Glinski>::HASH_COUNT; ++k) {
+    for (Size k = 0; k < Zobrist<Glinski>::HASH_COUNT; ++k) {
         printHexValue(randomBitstring());
     }
 }
@@ -100,12 +105,21 @@ void test_zobrist_initial_wq(bool verbose=false) {
 void test_zobrist_initial_board(bool verbose=false) {
     ZHash boardHash = 0;
 
-    for (const PiecePlacement& pp : Glinski::piecePlacements()) {
-        const auto [index, c, pt] = pp;
-        boardHash ^= Zobrist<Glinski>::getZHash(index, c, pt);
+    PiecesSparse pieces = Fen<Glinski>::fen_board_parse(Glinski::fenInitial, verbose);
+
+    // Use FEN order to make verbose output easier to comprehend
+    for (Index fenOrder = 0; fenOrder < Glinski::CELL_COUNT; ++fenOrder) {
+        Index index = Glinski::fenOrderToIndex[fenOrder];
+        if (pieces[index].has_value()) {
+            const auto [c, pt] = pieces[index].value();
+            if (verbose) { cout << piece_fen_string(c, pt); }
+            boardHash ^= Zobrist<Glinski>::getZHash(index, c, pt);
+        } else if (verbose) {
+            cout << '.';
+        }
     }
     if (verbose) {
-        cout << "Initial board hash = ";
+        cout << "\nInitial board hash = ";
         printHexValue(boardHash);
         cout << "\n";
     }
