@@ -46,7 +46,7 @@ void test_game(bool verbose=false) {
     const GameOutcome& outcome = g.play();
     assert(outcome == g.outcome);
     cout << "Game ended after " << g.board.currentCounter() << " moves.\n";
-    cout << g.game_summary_string(outcome) << "\n";
+    cout << g.game_summary_string() << "\n";
     cout << g.pgn_string() << "\n";
     cout << g.game_summary_string() << "\n";
 }
