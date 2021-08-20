@@ -15,20 +15,11 @@
 
 #pragma once
 
+#include "util_hexchess.h"
+
 
 namespace hexchess::core {
 
-/// \brief Records the outcome of a game.
-///
-/// If Termination is any type of win, then winner reflects the winner.
-/// Note: In Glinski chess, a Stalemate earns 3/4 point for the last mover, and 1/4 for the other,
-///       In that case, winner is the player who last moved.
-struct Outcome {
-    Termination termination;  ///< How the game ended, or None, if the game is still in play.
-    Color winner;  ///< The winner if termination reflects a Win or a draw due to Stalemate.
-};
-
-std::ostream &operator<<(std::ostream &os, const Outcome& outcome);
 /// \brief The condition that caused the game to end: checkmate, resignation, stalemate, etc.
 ///
 /// Technically, there can be more than one enabling condition or trigger for a draw.
@@ -41,21 +32,25 @@ std::ostream &operator<<(std::ostream &os, const Outcome& outcome);
 /// \todo [Short-term] Implement detection of insufficient resources.
 enum class Termination {
     None,                      ///< \brief Game is still in play
+    // ====================
     Win_Checkmate,             ///< \brief Win_Proposed_Accepted
     // Win_Proposed_Accepeted  // \brief Player, during turn, requests Win. Opponent agrees.
     Win_Resign,                ///< \brief A Player resigned instead of moving.
     // Win_Timeout,            // \brief A Player won because their opponent ran out of time.
     // Win_Timeout_Claimed,    // \brief Use when claim came after both flags fell, or after an intermediate move, or unknown.
+    // ====================
+    Draw_3xRepetition,         ///< In Glinski chess, 3x repetition causes automatic Draw
+    Draw_50MoveRule,           ///< In Glinski chess, 50 moves without progress causes automatic Draw
 
-    Draw_5xRepetition,         ///< \brief Note: This ends the game automatically. No claim needed.
-    Draw_75MoveRule,           ///< \brief Note: This ends the game automatically. No claim needed.
+    // Draw_5xRepetition,      ///< \brief Note: This ends the game automatically. No claim needed.
+    // Draw_75MoveRule,        ///< \brief Note: This ends the game automatically. No claim needed.
     // Draw_Agreement,         // \brief One player proposes a Draw, and the other accepts.
 
     /// \brief 3x repetition. (Allows draw to be claimed, but does not automatically end the game.)
-    Draw_Claimed_3xRepetition,
+    // Draw_Claimed_3xRepetition,
 
     /// \brief 50 moves without capture or Pawn move. (Allows draw to be claimed, but does not automatically end the game.)
-    Draw_Claimed_50MoveRule,
+    // Draw_Claimed_50MoveRule,
 
     // \brief A game that cannot be won, due to arrangement of the pieces.
     // Draw_DeadPosition,
@@ -63,6 +58,28 @@ enum class Termination {
     /// \brief A game that cannot be won, due to which pieces are on the board. (In Glinski chess, KQ vs KR, KR vs K)
     Draw_InsufficientResources,
     Draw_Stalemate              ///< \brief Player has no moves available on their turn.
+};
+
+std::string termination_string(Termination t);
+
+// ========================================
+
+/// \brief Records the outcome of a game.
+///
+/// If Termination is any type of win, then winner reflects the winner.
+/// Note: In Glinski chess, a Stalemate earns 3/4 point for the last mover, and 1/4 for the other,
+///       In that case, winner is the player who last moved.
+struct GameOutcome {
+    Termination termination;  ///< How the game ended, or None, if the game is still in play.
+    Color winner;  ///< The winner if termination reflects a Win or a draw due to Stalemate.
+
+    bool isDraw() const;
+    bool isStalemate() const;
+    bool isWin() const;
+
+    std::string game_outcome_reader_string(Color reader) const;
+    float score(Color c) const;
+    bool operator==(const GameOutcome& other) const;
 };
 
 }  // namespace hexchess::core
