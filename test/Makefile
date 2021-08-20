@@ -13,90 +13,124 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SRC_TEST_DIR=.
-SRC_CORE_DIR=../core
-OBJ_DIR=.
+MAKEFLAGS=--warn-undefined-variables
+
+CXXFLAGS =
+LDFLAGS =
+TARGET_ARCH =
+LOADLIBES =
+LDLIBS =
+
+SRC_BASE_DIR=../src
+SRC_CORE_DIR=$(SRC_BASE_DIR)/core
+TEST_DIR=.
+OBJ_DIR=obj
 
 CC=clang++
-CPPFLAGS=-std=c++17 -g -I$(SRC_CORE_DIR) -I$(SRC_TEST_DIR)
+# CC=g++
+CPPFLAGS=-std=c++17 -Wall -g -I$(SRC_BASE_DIR) -I$(SRC_CORE_DIR) -I$(TEST_DIR)
+# CPPFLAGS += -Werror, to treat all warnings as errors
+# CPPFLAGS += -Wno-error=X, to override -Werror for any specified condition X.
 
-.PHONY: test
+.PHONY: build test
 
 default: test
 
 # APP=hexchess
 TESTS= \
-	$(OBJ_DIR)/test_bitboard \
 	$(OBJ_DIR)/test_geometry \
-	$(OBJ_DIR)/test_move \
-	$(OBJ_DIR)/test_piece \
-	$(OBJ_DIR)/test_zobrist
+	$(OBJ_DIR)/test_board    \
+	$(OBJ_DIR)/test_fen      \
+	$(OBJ_DIR)/test_zobrist  \
+	$(OBJ_DIR)/test_move     \
+	$(OBJ_DIR)/test_player   \
+	$(OBJ_DIR)/test_game
 
 clean:
-	rm -f *.o $(TESTS)
+	rm -f $(OBJ_DIR)/*.o $(TESTS)
 
-test: $(TESTS)
-	echo "Compilation done: test_bitboard, test_geometry, test_move, test_piece, test_zobrist"
-	$(OBJ_DIR)/test_bitboard
-	$(OBJ_DIR)/test_geometry
-	$(OBJ_DIR)/test_move
-	$(OBJ_DIR)/test_piece
-	$(OBJ_DIR)/test_zobrist
+$(OBJ_DIR):
+	mkdir $(OBJ_DIR)
 
+build: $(TESTS)
+	echo "========== Tests ready to be run =========="
 
-$(OBJ_DIR)/%.o: $(SRC_CORE_DIR)/%.cpp
+# Execution of tests proceeds from simpler to more complex functionality.
+test: build
+	$(foreach t, $(TESTS), ./$(t))
+
+$(OBJ_DIR)/%.o: $(SRC_BASE_DIR)/%.cpp $(OBJ_DIR)
 	$(CC) $(CPPFLAGS) -c -o $@ $<
 
-$(OBJ_DIR)/%.o: %.cpp
+$(OBJ_DIR)/%.o: $(SRC_CORE_DIR)/%.cpp $(OBJ_DIR)
 	$(CC) $(CPPFLAGS) -c -o $@ $<
 
+$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp $(OBJ_DIR)
+	$(CC) $(CPPFLAGS) -c -o $@ $<
 
-TEST_BITBOARD_H = bitboard.h geometry.h util.h util_hexchess.h zobrist.h
-TEST_BITBOARD_CPP = bitboard.cpp geometry.cpp util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
+TEST_BOARD_H = board.h fen.h geometry.h move.h util_hexchess.h zobrist.h
+TEST_BOARD_CPP = board.cpp fen.cpp geometry.cpp move.cpp \
+                    util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
 
-TEST_GEOMETRY_H = bitboard.h geometry.h util.h util_hexchess.h variant.h
-TEST_GEOMETRY_CPP = geometry.cpp util_hexchess.cpp variant.cpp
+TEST_FEN_H = fen.h geometry.h util_hexchess.h
+TEST_FEN_CPP = fen.cpp geometry.cpp util_hexchess.cpp variant.cpp
 
-TEST_MOVE_H = geometry.h move.h piece.h util.h util_hexchess.h variant.h
-TEST_MOVE_CPP = geometry.cpp move.cpp piece.cpp util_hexchess.cpp variant.cpp
+TEST_GAME_H = board.h fen.h game.h game_outcome.h geometry.h move.h \
+              player.h util_hexchess.h zobrist.h
+TEST_GAME_CPP = board.cpp fen.cpp game.cpp game_outcome.cpp geometry.cpp move.cpp \
+                player.cpp util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
 
-TEST_PIECE_H = geometry.h piece.h util.h util_hexchess.h variant.h
-TEST_PIECE_CPP = geometry.cpp move.cpp piece.cpp util_hexchess.cpp variant.cpp
+TEST_GEOMETRY_H = fen.h geometry.h util_hexchess.h variant.h
+TEST_GEOMETRY_CPP = fen.cpp geometry.cpp util_hexchess.cpp variant.cpp
 
-TEST_ZOBRIST_H = geometry.h util.h util_hexchess.h variant.h zobrist.h
-TEST_ZOBRIST_CPP = geometry.cpp util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
+TEST_MOVE_H = board.h fen.h geometry.h move.h util_hexchess.h variant.h zobrist.h
+TEST_MOVE_CPP = board.cpp fen.cpp geometry.cpp move.cpp \
+                util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
 
+TEST_PLAYER_H = board.h fen.h geometry.h move.h \
+                player.h util_hexchess.h variant.h zobrist.h
+TEST_PLAYER_CPP = board.cpp fen.cpp geometry.cpp move.cpp \
+                  player.cpp util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
 
-TEST_BITBOARD_HDRS = $(TEST_BITBOARD_H:%.h=$(SRC_CORE_DIR)/%.h)
-TEST_GEOMETRY_HDRS = $(TEST_GEOMETRY_H:%.h=$(SRC_CORE_DIR)/%.h)
-TEST_MOVE_HDRS = $(TEST_MOVE_H:%.h=$(SRC_CORE_DIR)/%.h)
-TEST_PIECE_HDRS = $(TEST_PIECE_H:%.h=$(SRC_CORE_DIR)/%.h)
-TEST_ZOBRIST_HDRS = $(TEST_ZOBRIST_H:%.h=$(SRC_CORE_DIR)/%.h)
-
-TEST_BITBOARD_SRCS = $(TEST_BITBOARD_CPP:%.cpp=$(SRC_CORE_DIR)/%.o)
-TEST_GEOMETRY_SRCS = $(TEST_GEOMETRY_CPP:%.cpp=$(SRC_CORE_DIR)/%.o)
-TEST_MOVE_SRCS = $(TEST_MOVE_CPP:%.cpp=$(SRC_CORE_DIR)/%.o)
-TEST_PIECE_SRCS = $(TEST_PIECE_CPP:%.cpp=$(SRC_CORE_DIR)/%.o)
-TEST_ZOBRIST_SRCS = $(TEST_ZOBRIST_CPP:%.cpp=$(SRC_CORE_DIR)/%.o)
-
-TEST_BITBOARD_OBJS = $(TEST_BITBOARD_CPP:%.cpp=%.o)
-TEST_GEOMETRY_OBJS = $(TEST_GEOMETRY_CPP:%.cpp=%.o)
-TEST_MOVE_OBJS = $(TEST_MOVE_CPP:%.cpp=%.o)
-TEST_PIECE_OBJS = $(TEST_PIECE_CPP:%.cpp=%.o)
-TEST_ZOBRIST_OBJS = $(TEST_ZOBRIST_CPP:%.cpp=%.o)
+TEST_ZOBRIST_H = fen.h geometry.h util_hexchess.h variant.h zobrist.h
+TEST_ZOBRIST_CPP = fen.cpp geometry.cpp \
+                   util_hexchess.cpp variant.cpp zobrist.cpp zobrist_table.cpp
 
 
-test_bitboard: $(TEST_BITBOARD_HDRS) $(TEST_BITBOARD_OBJS) test_bitboard.o
-	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_bitboard test_bitboard.o $(TEST_BITBOARD_OBJS)
+TEST_BOARD_HDRS    = $(TEST_BOARD_H:%.h=$(SRC_CORE_DIR)/%.h) $(SRC_BASE_DIR)/util.h
+TEST_FEN_HDRS      = $(TEST_FEN_H:%.h=$(SRC_CORE_DIR)/%.h)
+TEST_GAME_HDRS     = $(TEST_GAME_H:%.h=$(SRC_CORE_DIR)/%.h) $(SRC_BASE_DIR)/util.h
+TEST_GEOMETRY_HDRS = $(TEST_GEOMETRY_H:%.h=$(SRC_CORE_DIR)/%.h) $(SRC_BASE_DIR)/util.h
+TEST_MOVE_HDRS     = $(TEST_MOVE_H:%.h=$(SRC_CORE_DIR)/%.h) $(SRC_BASE_DIR)/util.h
+TEST_PLAYER_HDRS   = $(TEST_PLAYER_H:%.h=$(SRC_CORE_DIR)/%.h) $(SRC_BASE_DIR)/util.h
+TEST_ZOBRIST_HDRS  = $(TEST_ZOBRIST_H:%.h=$(SRC_CORE_DIR)/%.h) $(SRC_BASE_DIR)/util.h
 
-test_geometry: $(TEST_GEOMETRY_HDRS) $(TEST_GEOMETRY_OBJS) test_geometry.o
-	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_geometry test_geometry.o $(TEST_GEOMETRY_OBJS)
+TEST_BOARD_OBJS    = $(TEST_BOARD_CPP:%.cpp=$(OBJ_DIR)/%.o)
+TEST_FEN_OBJS      = $(TEST_FEN_CPP:%.cpp=$(OBJ_DIR)/%.o)
+TEST_GAME_OBJS     = $(TEST_GAME_CPP:%.cpp=$(OBJ_DIR)/%.o)
+TEST_GEOMETRY_OBJS = $(TEST_GEOMETRY_CPP:%.cpp=$(OBJ_DIR)/%.o)
+TEST_MOVE_OBJS     = $(TEST_MOVE_CPP:%.cpp=$(OBJ_DIR)/%.o)
+TEST_PLAYER_OBJS   = $(TEST_PLAYER_CPP:%.cpp=$(OBJ_DIR)/%.o)
+TEST_ZOBRIST_OBJS  = $(TEST_ZOBRIST_CPP:%.cpp=$(OBJ_DIR)/%.o)
 
-test_move: $(TEST_MOVE_HDRS) $(TEST_MOVE_OBJS) test_move.o
-	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_move test_move.o $(TEST_MOVE_OBJS)
 
-test_piece: $(TEST_PIECE_HDRS) $(TEST_PIECE_OBJS) test_piece.o
-	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_piece test_piece.o $(TEST_PIECE_OBJS)
+$(OBJ_DIR)/test_board: $(TEST_BOARD_HDRS) $(TEST_BOARD_OBJS) $(OBJ_DIR)/test_board.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_board $(OBJ_DIR)/test_board.o $(TEST_BOARD_OBJS)
 
-test_zobrist: $(TEST_ZOBRIST_HDRS) $(TEST_ZOBRIST_OBJS) test_zobrist.o
-	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_zobrist test_zobrist.o $(TEST_BITBOARD_OBJS)
+$(OBJ_DIR)/test_fen: $(TEST_FEN_HDRS) $(TEST_FEN_OBJS) $(OBJ_DIR)/test_fen.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_fen $(OBJ_DIR)/test_fen.o $(TEST_FEN_OBJS)
+
+$(OBJ_DIR)/test_game: $(TEST_GAME_HDRS) $(TEST_GAME_OBJS) $(OBJ_DIR)/test_game.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_game $(OBJ_DIR)/test_game.o $(TEST_GAME_OBJS)
+
+$(OBJ_DIR)/test_geometry: $(TEST_GEOMETRY_HDRS) $(TEST_GEOMETRY_OBJS) $(OBJ_DIR)/test_geometry.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_geometry $(OBJ_DIR)/test_geometry.o $(TEST_GEOMETRY_OBJS)
+
+$(OBJ_DIR)/test_move: $(TEST_MOVE_HDRS) $(TEST_MOVE_OBJS) $(OBJ_DIR)/test_move.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_move $(OBJ_DIR)/test_move.o $(TEST_MOVE_OBJS)
+
+$(OBJ_DIR)/test_player: $(TEST_PLAYER_HDRS) $(TEST_PLAYER_OBJS) $(OBJ_DIR)/test_player.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_player $(OBJ_DIR)/test_player.o $(TEST_PLAYER_OBJS)
+
+$(OBJ_DIR)/test_zobrist: $(TEST_ZOBRIST_HDRS) $(TEST_ZOBRIST_OBJS) $(OBJ_DIR)/test_zobrist.o
+	$(CC) $(CPPFLAGS) -o $(OBJ_DIR)/test_zobrist $(OBJ_DIR)/test_zobrist.o $(TEST_ZOBRIST_OBJS)
