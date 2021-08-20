@@ -21,7 +21,6 @@
 #include "geometry.h"
 #include "variant.h"
 
-
 using std::cout;
 using std::string;
 
@@ -31,6 +30,18 @@ using std::vector;
 
 
 namespace hexchess::core {
+
+template<>
+HexRay<Glinski>::HexRay(Index start, const HexDir& dir) {
+    for (HexPos cursor = V::indexToPos(start) + dir;
+             V::isOnBoard(cursor);
+             cursor += dir)
+    {
+        Index curIndex = V::posToIndex(cursor);
+        bits.set(curIndex);
+        indices.push_back(curIndex);
+    }
+}
 
 // ========================================
 // Board coordinates
@@ -79,9 +90,7 @@ bool Glinski::isOnBoard(HexCoord hex0, HexCoord hex1) {
         && hex0 - hex1 <= 5;  // SE
 }
 
-string& Glinski::cellName(Index index)
-{
-    static vector<string> cellNames {
+const Strings Glinski::cellNames {
                        "A1", "B1", "C1", "D1", "E1", "F1",
                     "A2", "B2", "C2", "D2", "E2", "F2", "G2",
                  "A3", "B3", "C3", "D3", "E3", "F3", "G3", "H3",
@@ -93,14 +102,29 @@ string& Glinski::cellName(Index index)
                  "D9", "E9", "F9", "G9", "H9", "I9", "K9", "L9",
                     "E10","F10","G10","H10","I10","K10","L10",
                        "F11","G11","H11","I11","K11","L11"
-        };
-    return cellNames[index];
+};
+
+const string& Glinski::cellName(Index index) {
+    return cellNames.at(index);
+}
+
+Index Glinski::nameToIndex(const string& name) {
+    static const map<string, Index> n2i { []()
+        {
+            map<string, Index> result;
+            for (Index index = 0; index < V::CELL_COUNT; ++index) {
+                string name = V::cellNames[index];
+                result[name] = index;
+            }
+            return result;
+        }()};
+    return n2i.at(name);
 }
 
 // ========================================
 // Piece placement
 
-const string Glinski::fenInitial{"b/qk/nbn/r2r/p1b1p/1p2p1/1p1p1/2pp2/2p2/6/5/6/2P2/2PP2/1P1P1/1P2P1/P1B1P/R2R/NBN/QK/B w - - 0 1"};
+const string Glinski::fenInitial{"b/qk/nbn/r2r/p1b1p/1p2p1/1p1p1/2pp2/2p2/6/5/6/2P2/2PP2/1P1P1/1P2P1/P1B1P/R2R/NBN/QK/B w - - 1 1"};
 
 const Index Glinski::fenOrderToIndex[Glinski::CELL_COUNT] {
                        85,
@@ -129,51 +153,6 @@ const Index Glinski::fenOrderToIndex[Glinski::CELL_COUNT] {
 const Short Glinski::fenRowLengths[Glinski::ROW_COUNT] {
     1,2,3,4,5,6,  5,6,5,6,  5,  6,5,6,5,  6,5,4,3,2,1
 };
-
-const std::vector<PiecePlacement>& Glinski::piecePlacements() {
-    static constexpr int bk_indices[1] = {86};
-    static constexpr int bq_indices[1] = {78};
-    static constexpr int br_indices[2] = {61, 88};
-    static constexpr int bb_indices[3] = {72, 79, 85};
-    static constexpr int bn_indices[2] = {70, 87};
-    // See private members in class Glinski
-    // static constexpr int bp_indices[9] = {51, 52, 53, 54, 55, 65, 74, 82, 89};
-
-    static constexpr int wk_indices[1] = {12};
-    static constexpr int wq_indices[1] = {4};
-    static constexpr int wr_indices[2] = {2, 29};
-    static constexpr int wb_indices[3] = {5, 11, 18};
-    static constexpr int wn_indices[2] = {3, 20};
-    // See private members in class Glinski
-    // static constexpr int wp_indices[9] = {1, 8, 16, 25, 35, 36, 37, 38, 39};
-
-    static const vector<PiecePlacement>& placements { []()
-        {
-            static vector<PiecePlacement> result{};
-
-            for (Index k : bk_indices) { result.push_back(PiecePlacement{k, Color::Black, PieceType::King});   }
-            for (Index k : bq_indices) { result.push_back(PiecePlacement{k, Color::Black, PieceType::Queen});  }
-            for (Index k : br_indices) { result.push_back(PiecePlacement{k, Color::Black, PieceType::Rook});   }
-            for (Index k : bb_indices) { result.push_back(PiecePlacement{k, Color::Black, PieceType::Bishop}); }
-            for (Index k : bn_indices) { result.push_back(PiecePlacement{k, Color::Black, PieceType::Knight}); }
-            for (Index k : Glinski::_bp_indices) {
-                result.push_back(PiecePlacement{k, Color::Black, PieceType::Pawn});
-            }
-
-            for (Index k : wk_indices) { result.push_back(PiecePlacement{k, Color::White, PieceType::King});   }
-            for (Index k : wq_indices) { result.push_back(PiecePlacement{k, Color::White, PieceType::Queen});  }
-            for (Index k : wr_indices) { result.push_back(PiecePlacement{k, Color::White, PieceType::Rook});   }
-            for (Index k : wb_indices) { result.push_back(PiecePlacement{k, Color::White, PieceType::Bishop}); }
-            for (Index k : wn_indices) { result.push_back(PiecePlacement{k, Color::White, PieceType::Knight}); }
-            for (Index k : Glinski::_wp_indices) {
-                result.push_back(PiecePlacement{k, Color::White, PieceType::Pawn});
-            }
-            return result;
-        }()
-    };
-
-    return placements;
-}
 
 // ========================================
 // Initialization of private data
@@ -228,6 +207,11 @@ vector<HexRays<Glinski>> Glinski::queenRays { []()
     {
         vector<HexRays<Glinski>> result;
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+            HexRays<Glinski> rays = getSlideRays(index, Glinski::queenSlideDirs);
+            // TODO: Complete work in progress. Reported size is too small
+            // for (const HexRay<Glinski>& ray : rays) {
+            //     cout << "Adding Queen ray with size " << ray.size() << "\n";
+            // }
             result.push_back(getSlideRays(index, Glinski::queenSlideDirs));
         }
         return result;

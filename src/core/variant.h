@@ -1,5 +1,3 @@
-// Copyright (C) 2021, by Jay M. Coskey
-//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +23,11 @@
 
 namespace hexchess::core {
 
-using PiecePlacement = std::tuple<Index, Color, PieceType>;
+using ColorPieceType = std::pair<Color, PieceType>;
+using OptColorPieceType = std::optional<ColorPieceType>;
+
+using PiecesDense = std::vector<std::tuple<Index, Color, PieceType>>;
+using PiecesSparse = std::vector<OptColorPieceType>;
 
 /// \brief A (possibly empty) ordered sequence of Indexes in given direction from
 ///        a reference cell. The sequence does not include the reference cell.
@@ -40,19 +42,10 @@ template <typename Variant>
 struct HexRay {
     typedef Variant V;
 
-    HexRay(Index start, const HexDir& dir)
-    {
-        for (HexPos cursor = V::indexToPos(start) + dir;
-            V::isOnBoard(cursor);
-            cursor += dir
-            )
-        {
-            Index curIndex = V::posToIndex(cursor);
-            bits.set(curIndex);
-            indices.push_back(curIndex);
-        }
-    }
+    HexRay(Index start, const HexDir& dir);
     ~HexRay() {};
+
+    bool size() const { return indices.size(); }
 
     /// Returns true if there are no indices this HexRay.
     bool isEmpty() const { return indices.empty(); }
@@ -78,7 +71,6 @@ public:
     static constexpr Short ROW_COUNT = 21;        ///< \brief Rows in this Variant's board. Used in FEN.
 
     typedef std::bitset<CELL_COUNT> Bits;
-    static const inline Bits zeroBits{};
 
     // ========================================
     // Board coordinates
@@ -95,6 +87,14 @@ public:
 
     static HexCoord hex0(Index index);  ///< \brief Returns the first Hex coordinate of the cell.
     static HexCoord hex1(Index index);  ///< \brief Returns the second Hex coordinate of the cell.
+    static HexCoord column(Index index) { return hex0(index); }
+
+    // \brief Returns row, where the midline is row #0, Black's home is row #10, and White's is -10
+    static HexCoord row(Index index) { return 2 * hex1(index) - hex0(index) - 5; }
+    static HexCoord rowIncreasingForward(Index index, Color c) {
+        HexCoord multiplier = c == Color::Black ? -1 : 1;
+        return multiplier * row(index);
+    }
 
     /// \brief Convert between representaions of a Cell.
     static HexPos indexToPos(Index index) { return HexPos(hex0(index), hex1(index)); }
@@ -108,14 +108,10 @@ public:
     /// \brief Returns true if the given HexPos represents a Cell on the board.
     static bool isOnBoard(const HexPos& pos) { return isOnBoard(pos.hex0, pos.hex1); }
 
-    /// \brief Returns the standard name (e.g., A0, L6, etc.) of the given Cell.
-    static std::string& cellName(Index index);
-
-    // ========================================
-    // Piece placements
-
-    /// \brief Info about initial piece placements. Same info as in the first component of a FEN string.
-    static const std::vector<PiecePlacement>& piecePlacements();
+    /// \brief The standard names (e.g., A0, L6, etc.) of the Cells
+    static const Strings cellNames;
+    static const std::string& cellName(Index index);
+    static Index nameToIndex(const std::string& name);
 
     // ========================================
     // Cell shading
@@ -142,6 +138,20 @@ public:
     static const V::Bits& pawnPromotionBits(Color c) { return colorToPawnPromotionBits[c]; }
     static const V::Bits& pawnStartBits(Color c) { return colorToPawnStartBits[c]; }
 
+    // static constexpr int bk_indices[1] = {86};
+    // static constexpr int bq_indices[1] = {78};
+    // static constexpr int br_indices[2] = {61, 88};
+    // static constexpr int bb_indices[3] = {72, 79, 85};
+    // static constexpr int bn_indices[2] = {70, 87};
+    // static constexpr int bp_indices[9] = {51, 52, 53, 54, 55, 65, 74, 82, 89};
+
+    // static constexpr int wk_indices[1] = {12};
+    // static constexpr int wq_indices[1] = {4};
+    // static constexpr int wr_indices[2] = {2, 29};
+    // static constexpr int wb_indices[3] = {5, 11, 18};
+    // static constexpr int wn_indices[2] = {3, 20};
+    // static constexpr int wp_indices[9] = {1, 8, 16, 25, 35, 36, 37, 38, 39};
+
     // ========================================
     // Piece movement lookup
 
@@ -149,7 +159,7 @@ public:
     static const std::map<Index, Index> pawnAdvance1Indices(Color c) { return colorToPawnAdvance1Indices[c]; }
 
     /// \todo Change method signature to flat-side variants w/ 2 advance dirs (e.g., Brusky, De Vasa)
-    static const std::map<Index, Index> pawnAdvance2BIndices(Color c) { return colorToPawnAdvance2Indices[c]; }
+    static const std::map<Index, Index> pawnAdvance2Indices(Color c) { return colorToPawnAdvance2Indices[c]; }
 
     static const V::Bits pawnCaptureBits(Color c) { return colorToPawnCaptureBits[c]; }
 
