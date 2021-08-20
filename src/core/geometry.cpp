@@ -19,7 +19,6 @@
 #include "geometry.h"
 #include "util.h"
 
-
 using std::map;
 using std::vector;
 
