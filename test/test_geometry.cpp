@@ -19,10 +19,13 @@
 #include <iostream>
 
 #include "geometry.h"
+#include "util.h"
+#include "util_hexchess.h"
 #include "variant.h"
 
-
 using std::cout;
+
+using hexchess::NotImplementedException;
 
 using hexchess::core::Glinski;
 using hexchess::core::HexDir;
@@ -75,6 +78,31 @@ void test_position_direction(bool verbose=false) {
     assert(knightDest.hex0 == 6);
     assert(knightDest.hex1 == 7);
     assert(V::posToIndex(knightDest) == 65);
+}
+
+/// \brief Test: Test the count of all Queen moves over all starting points.
+void test_move_count_king(bool verbose) {
+    throw NotImplementedException{"test_geometry.cpp: test_move_count_king"};
+}
+
+/// \brief Test: Test the count of all Queen moves over all starting points.
+void test_move_count_queen(bool verbose) {
+    throw NotImplementedException{"test_geometry.cpp: test_move_count_queen"};
+}
+
+/// \brief Test: Test the count of all Rook moves over all starting points.
+void test_move_count_rook(bool verbose) {
+    throw NotImplementedException{"test_geometry.cpp: test_move_count_rook"};
+}
+
+/// \brief Test: Test the count of all Rook moves over all starting points.
+void test_move_count_bishop(bool verbose) {
+    throw NotImplementedException{"test_geometry.cpp: test_move_count_bishop"};
+}
+
+/// \brief Test: Test the count of all Knight moves over all starting points.
+void test_move_count_knight(bool verbose) {
+    throw NotImplementedException{"test_geometry.cpp: test_move_count_knight"};
 }
 
 int main(int argc, char *argv[]) {
