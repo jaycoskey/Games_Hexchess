@@ -45,7 +45,7 @@ public:
         return c == Color::Black ? _bPlayer->name() : _wPlayer->name();
     }
 
-    const std::string game_summary_string(const GameOutcome &outcome) const;
+    const std::string game_summary_string() const;
 
     Board<V> board;
     GameOutcome outcome;

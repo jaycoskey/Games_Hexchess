@@ -36,7 +36,7 @@ const GameOutcome& Game<Glinski>::play() {
 
 /// \todo Add Game::game_outcome_json_string()
 template<>
-const string Game<Glinski>::game_summary_string(const GameOutcome& outcome) const {
+const string Game<Glinski>::game_summary_string() const {
     std::ostringstream oss;
 
     oss << "Players=("
