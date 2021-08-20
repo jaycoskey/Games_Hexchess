@@ -16,6 +16,7 @@
 #pragma once
 
 #include <optional>
+#include <sstream>
 
 #include "util.h"
 #include "util_hexchess.h"
@@ -36,7 +37,7 @@ class Piece;
 /// When a Move is first created, its check type is set to Unknown.
 /// If the opponent is later determined to not be in check Later, it is set to NoCheck.
 /// Otherwise, the check type is set to Check or Checkmate, as appropriate.
-enum class CheckEnum {
+enum class CheckStatus {
     Unknown,
     NoCheck,
     Check,
@@ -65,38 +66,60 @@ public:
         Index from,
         Index to,
         MoveEnum mt=MoveEnum::Simple,
-        Piece* capturedPiece=nullptr,
-        OptPieceType optPromo=std::nullopt,
-        CheckEnum checkType=CheckEnum::Unknown
+        OptPieceType optCaptured=std::nullopt,
+        OptPieceType optPromotedTo=std::nullopt,
+        CheckStatus checkStatus=CheckStatus::Unknown
         )
         : _mover{mover},
           _pieceType{pt},
           _from{from},
           _to{to},
           _moveEnum{mt},
-          _capturedPiece{capturedPiece},
-          _optPromotedTo{optPromo},
-          _checkType{checkType}
-    {};
-    Move(const Move& other) = delete;
+          _optCaptured{optCaptured},
+          _optPromotedTo{optPromotedTo},
+          _checkStatus{checkStatus}
+    { }
+
+    Move(const Move& other) = default;
     ~Move() {};
-    Move& operator=(const Move& other) = delete;
+    Move& operator=(const Move& other);
+
+    Color mover() const                { return _mover; }
+    PieceType pieceType() const        { return _pieceType; }
+    Index from() const                 { return _from; }
+    Index to() const                   { return _to; }
+    MoveEnum moveEnum() const          { return _moveEnum; }
+    const OptPieceType optCaptured()   const { return _optCaptured; };
+    const OptPieceType optPromotedTo() const { return _optPromotedTo; };
+    CheckStatus checkStatus() const    { return _checkStatus; }
 
     /// \brief Used to determine whether to reset the nonProgressCounter.
-    bool isProgressMove();
+    bool isCapture() const { return _optCaptured != std::nullopt; }
+    bool isCastling() const { return _moveEnum == MoveEnum::Castling; }
+    bool isCheckExclusive() const { return _checkStatus == CheckStatus::Check; }
+    bool isCheckInclusive() const;
+    bool isCheckmate() const { return _checkStatus == CheckStatus::Checkmate; }
+    bool isEnPassant() const { return _moveEnum == MoveEnum::EnPassant; }
 
-    /// \brief Returns the PGN of the game up to the current half-move.
-    std::string pgnText();
+    // Pawn moves, captures, castlability disruptions (but not castling), e.p. passes
+    // bool isIrreversible();
+
+    bool isProgressMove() const;
+    bool isPromotion() const { return _moveEnum == MoveEnum::PawnPromotion; }
+
+    const std::string move_lan_string() const;
 
 private:
     Color _mover;                 ///< \brief The player moving
     PieceType _pieceType;         ///< \brief On castling, pieceType == PieceType::King
-    Index _from;                  ///< \brief The start
-    Index _to;                    ///< \brief The move destination
+    Index _from;                  ///< \brief The beginning position
+    Index _to;                    ///< \brief The ending position
     MoveEnum _moveEnum;           ///< \brief The move type, to simplify Undo
-    Piece* _capturedPiece;        ///< \brief The captured piece, to support Undo
+    OptPieceType _optCaptured;    ///< \brief The captured piece type (for Undo)
     OptPieceType _optPromotedTo;  ///< \brief The chosen promotion type
-    CheckEnum _checkType;         ///< \brief The Check type: Unknown/NoCheck/Check/Checkmate
+    CheckStatus _checkStatus;     ///< \brief The Check type: Unknown/NoCheck/Check/Checkmate
 };
 
-}  // namespace hexchess::core
+std::ostream& operator<<(std::ostream& os, const Move& move);
+
+}  // namespace hexchess::core)

@@ -16,21 +16,67 @@
 #include <iostream>
 
 #include "move.h"
-
+#include "variant.h"
 
 using std::string;
 
 
 namespace hexchess::core {
 
-bool Move::isProgressMove() {
-    return _pieceType == PieceType::Pawn || _capturedPiece != nullptr;
+Move& Move::operator=(const Move& other) {
+    if (this != &other) {
+        _mover = other._mover;
+        _pieceType = other._pieceType;
+        _from = other._from;
+        _to = other._to;
+        _moveEnum = other._moveEnum;
+        _optCaptured = other._optCaptured;
+        _optPromotedTo = other._optPromotedTo;
+        _checkStatus = other._checkStatus;
+
+        // _mover = other.mover();
+        // _pieceType = other.pieceType();
+        // _from = other.from();
+        // _to = other.to();
+        // _moveEnum = other.moveEnum();
+        // _optCaptured = other.optCaptured();
+        // _optPromotedTo = other.optPromotedTo();
+        // _checkStatus = other.checkStatus();
+    }
+    return *this;
 }
 
-string pgnTest() {
-    // std::ostringstream oss;
-    // return oss.str()
-    throw NotImplementedException{};
+bool Move::isCheckInclusive() const {
+    return _checkStatus == CheckStatus::Check
+        || _checkStatus == CheckStatus::Checkmate;
+}
+
+bool Move::isProgressMove() const {
+    return _pieceType == PieceType::Pawn || _optCaptured != std::nullopt;
+}
+
+const std::string Move::move_lan_string() const {
+    std::string result{};
+
+    if (_moveEnum == MoveEnum::Castling) {
+        // TODO: Loop over castlings. On a match, add code & break
+    } else {
+        result += piece_type_string(_pieceType)
+                  + Glinski::cellName(_from)
+                  + (isCapture() ? "x" : "-")
+                  + Glinski::cellName(_to);
+    }
+    if (isEnPassant()) { result += "ep"; }
+    if (isPromotion()) { result += string{'='} + piece_type_string(_optPromotedTo.value()); }
+
+    if (isCheckExclusive()) { result += "+"; }
+    if (isCheckmate()) { result += "#"; }
+    return result;
+}
+
+std::ostream& operator<<(std::ostream& os, const Move& move) {
+    os << move.move_lan_string();
+    return os;
 }
 
 }  // namespace hexchess::core
