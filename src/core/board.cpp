@@ -13,31 +13,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cctype>
+
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
-#include "bitboard.h"
+#include "board.h"
+#include "fen.h"
 #include "geometry.h"
+#include "move.h"
 #include "util.h"
 #include "util_hexchess.h"
 #include "variant.h"
 #include "zobrist.h"
 
-
 using std::cout;
 using std::ostringstream;
+using std::string;
 
 using std::set;
-using std::string;
+using std::vector;
 
 
 namespace hexchess::core {
 
-// Note: Does not check prior status of Bitboard
+// ========================================
+// Constructor support
+
+// Note: Does not check prior status of Board
 template<>
-void Bitboard<Glinski>::setPiece(Index index, Color c, PieceType pt, bool value) {
+void Board<Glinski>::setPiece(Index index, Color c, PieceType pt, bool value) {
     _anyPieceBits[index] = value;
     _colorToAnyPieceBits[c][index] = value;
 
@@ -61,26 +68,50 @@ void Bitboard<Glinski>::setPiece(Index index, Color c, PieceType pt, bool value)
         _colorToKingBits[c][index] = value;
         break;
     default:
-        throw std::logic_error("Bitboard<Glinski>::setPiece: Unrecognized piece type");
+        throw std::logic_error("Board<Glinski>::setPiece: Unrecognized piece type");
     }
 }
 
 template<>
-void Bitboard<Glinski>::addPiece(Index index, Color c, PieceType pt) {
+void Board<Glinski>::addPiece(Index index, Color c, PieceType pt, bool verbose) {
+    if (verbose) {
+        cout << "Adding " << piece_string(c, pt)
+             << " @ " << V::cellNames[index] << "\n";
+    }
     setPiece(index, c, pt, true);
 }
 
 template<>
-void Bitboard<Glinski>::removePiece(Index index, Color c, PieceType pt) {
+void Board<Glinski>::removePiece(Index index, Color c, PieceType pt) {
     setPiece(index, c, pt, false);
 }
 
+template<>
+void Board<Glinski>::initialize(const Fen<Glinski>& fen) {
+    // (1) Piece placement
+    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+        if (fen.piecesSparse[index].has_value()) {
+            auto [c, pt] = fen.piecesSparse[index].value();
+            addPiece(index, c, pt);
+        }
+    }
 
-// ========================================
-// Get Color and PieceType
+    // (2) Mover
+    _mover = fen.mover;
+
+    // (3) TODO: Castling availability
+
+    // (4) En passant avaiability
+    _optEpIndex = fen.optEpIndex;
+
+    // (5) Half-move (ply) clock
+    _currentCounter = fen.currentCounter;
+
+    // (6) Full move number (not needed)
+}
 
 template<>
-Color Bitboard<Glinski>::getColorAt(Index index) const {
+Color Board<Glinski>::getColorAt(Index index) const {
     assert(anyPieceBits().test(index));
     return anyPieceBits(Color::Black).test(index)
         ? Color::Black
@@ -89,7 +120,7 @@ Color Bitboard<Glinski>::getColorAt(Index index) const {
 
 // Adding one more level to the decision tree (e.g., testing non-Pawns for isBN) doesn't pay off.
 template<>
-PieceType Bitboard<Glinski>::getPieceTypeAt(Index index, Color c) const {
+PieceType Board<Glinski>::getPieceTypeAt(Index index, Color c) const {
     assert(anyPieceBits().test(index));
     assert(anyPieceBits(c).test(index));
 
@@ -105,73 +136,252 @@ PieceType Bitboard<Glinski>::getPieceTypeAt(Index index, Color c) const {
         return PieceType::Queen;
     } else /* King */ {
         if (!kingBits(c).test(index)) {
-            throw std::logic_error("Inconsistent bitboard information on cell #" + std::to_string(index));
+            throw std::logic_error("Inconsistent board information on cell #" + std::to_string(index));
         }
         return PieceType::King;
     }
 }
 
 template<>
-PieceType Bitboard<Glinski>::getPieceTypeAt(Index index) const {
+PieceType Board<Glinski>::getPieceTypeAt(Index index) const {
     switch(getColorAt(index)) {
     case Color::Black:
         return getPieceTypeAt(index, Color::Black);
     case Color::White:
         return getPieceTypeAt(index, Color::White);
     default:
-        throw std::logic_error("Bitboard<Glinski>::getPieceTypeAt: Unrecognized Color");
+        throw std::logic_error("Board<Glinski>::getPieceTypeAt: Unrecognized Color");
     }
 }
 
 // ========================================
-// Constructor
+// Constructors
+
+/// \brief Constructs a Board---populated if \p doPopulate is true
+///
+/// For a board with default initial setup: Board(bool doPopulate=true[default])
+/// For an empty board:                     Board(bool doPopulate=false)
+/// For a board with custom setup, use Board(const Fen<V> initial setup: Board()
+template<>
+Board<Glinski>::Board(bool doPopulate)
+  : _anyPieceBits{},
+    _colorToAnyPieceBits { { Color::Black, {}}, {Color::White, {}} },
+    _colorToKingBits     { { Color::Black, {}}, {Color::White, {}} },
+    _colorToQueenBits    { { Color::Black, {}}, {Color::White, {}} },
+    _colorToRookBits     { { Color::Black, {}}, {Color::White, {}} },
+    _colorToBishopBits   { { Color::Black, {}}, {Color::White, {}} },
+    _colorToKnightBits   { { Color::Black, {}}, {Color::White, {}} },
+    _colorToPawnBits     { { Color::Black, {}}, {Color::White, {}} },
+
+    _colorToKingIndex    { { Color::Black, -1}, {Color::White, -1} },
+
+    _mover{Color::White},
+    _colorToRookCastlingAvailabilityBits
+                         { { Color::Black, {}}, {Color::White, {}} },
+
+    _optEpIndex{std::nullopt},
+    _enPassantBits{0}
+{
+    if (doPopulate) {
+        Fen<V> fenInitial{Glinski::fenInitial};
+        initialize(fenInitial);
+    }
+}
+
+/// \brief Constructs Board from Fen instance (derived from FEN string)
+template<>
+Board<Glinski>::Board(const Fen<V>& fen)
+    : Board<Glinski>::Board(false)
+{
+    // Part (1) of FEN string: Piece placements
+    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+        if (fen.piecesSparse[index].has_value()) {
+            const auto [c, pt] = fen.piecesSparse[index].value();
+            addPiece(index, c, pt);
+
+            assert(getColorAt(index) == c);
+            assert(getPieceTypeAt(index) == pt);
+            assert(getPieceTypeAt(index, c) == pt);
+
+            if (pt == PieceType::King) {
+                if (c == Color::Black) {
+                    _colorToKingIndex[Color::Black] = index;
+                } else {
+                    _colorToKingIndex[Color::White] = index;
+                }
+            }
+        }
+    }
+
+    // Part (2) of FEN string: Active color
+    _mover = fen.mover;
+
+    // Part (3) of FEN string: Castling availability: TODO
+    // _colorToRookCastlingAvailabilityBits[Color::Black].set(k);
+    // _colorToRookCastlingAvailabilityBits[Color::White].set(k);
+
+    // Part (4) of FEN string: En passant
+    _optEpIndex = std::nullopt;
+
+    // Part (5) of FEN string: Half move clock
+    _currentCounter = fen.currentCounter;
+
+    // Part (6) of FEN string: Full move counter
+    // Not needed
+}
+
+/// \brief Constructs Board from FEN string by delegating to constructor using Fen instance
+template<>
+Board<Glinski>::Board(const string& fenStr)
+    : Board<Glinski>::Board{Fen<V>{fenStr}}
+{ }
+
+// ========================================
 
 template<>
-Bitboard<Glinski>::Bitboard(bool doPopulate)
-  : _anyPieceBits{},
-    _colorToAnyPieceBits{ { Color::Black, {}}, {Color::White, {}} },
-    _colorToKingBits{     { Color::Black, {}}, {Color::White, {}} },
-    _colorToQueenBits{    { Color::Black, {}}, {Color::White, {}} },
-    _colorToRookBits{     { Color::Black, {}}, {Color::White, {}} },
-    _colorToBishopBits{   { Color::Black, {}}, {Color::White, {}} },
-    _colorToKnightBits{   { Color::Black, {}}, {Color::White, {}} },
-    _colorToPawnBits{     { Color::Black, {}}, {Color::White, {}} },
-    _enPassantBits{}
-{
-    for (const PiecePlacement& pp : Glinski::piecePlacements()) {
-        const auto [index, c, pt] = pp;
-        addPiece(index, c, pt);
+PiecesDense Board<Glinski>::piecesDense() const {
+    PiecesDense result{};
 
-        assert(getColorAt(index) == c);
-        assert(getPieceTypeAt(index) == pt);
-        assert(getPieceTypeAt(index, c) == pt);
+    for (Index index = 0; index < V::CELL_COUNT; ++index) {
+        if (isAnyPieceAt(index)) {
+            Color c = getColorAt(index);
+            PieceType pt = getPieceTypeAt(index, c);
+            result.push_back(std::make_tuple(index, c, pt));
+        }
     }
+    return result;
+}
+
+template<>
+bool Board<Glinski>::isAttacking(Index from, Color, PieceType pt, Index tgt) const {
+    throw NotImplementedException{"Board<Glinski>::isAttacking"};
+}
+
+template<>
+bool Board<Glinski>::isCheck() const {
+    Index kIndex = getKingIndex(_mover);
+    assert(getPieceTypeAt(kIndex) == PieceType::King);
+
+    const PiecesDense& pieces = piecesDense();
+    for (const auto& pieceInfo : pieces) {
+        auto [from, c, pt] = pieceInfo;
+        if (c == opponent(_mover)) {
+            if (isAttacking(from, c, pt, kIndex)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+template<>
+bool Board<Glinski>::isCheckInclusive() const {
+    return isCheck();
+}
+
+template<>
+bool Board<Glinski>::isCheckmate() const {
+    throw NotImplementedException{"Board<Glinski>::isCheckmate"};
+}
+
+template<>
+bool Board<Glinski>::isCheckExclusive() const {
+    return isCheckInclusive() && !isCheckmate();
 }
 
 // ========================================
+
+template<>
+void Board<Glinski>::clear() {
+    _anyPieceBits.reset();
+    _enPassantBits.reset();
+
+    for (Color c : {Color::Black, Color::White}) {
+        _colorToAnyPieceBits[c].reset();
+        _colorToKingBits[c].reset();
+        _colorToQueenBits[c].reset();
+        _colorToRookBits[c].reset();
+        _colorToBishopBits[c].reset();
+        _colorToKnightBits[c].reset();
+        _colorToPawnBits[c].reset();
+    }
+    /// \todo: Support castling: Have Board::clear() modfy _castlingBits
+}
+
+template<>
+HalfMoveCounter Board<Glinski>::currentCounter() const {
+    return _currentCounter;
+}
+
+template<>
+const string Board<Glinski>::pgn_string() const {
+    std::ostringstream oss;
+
+    oss << "[TODO: Print headers]\n";
+    oss << "\n";
+    for (Short k = 0; k < _moveStack.size(); ++k) {
+        if (k % 2 == 0) {
+            oss << _moveStack[k] << ". ";
+        } else {
+            oss << _moveStack[k] << " ";
+        }
+        oss << _moveStack[k].move_lan_string();
+        if (k % 2 == 1) {
+            oss << "\n";
+        }
+    }
+    if (_moveStack.size() % 2 == 0) {
+        oss << "\n";
+    }
+    return oss.str();
+}
+
+template<>
+PiecesSparse Board<Glinski>::piecesSparse() const {
+    PiecesSparse result{};
+
+    for (Index index = 0; index < V::CELL_COUNT; ++index) {
+        if (isAnyPieceAt(index)) {
+            Color c = getColorAt(index);
+            PieceType pt = getPieceTypeAt(index, c);
+            result.push_back(mkPair(c, pt));
+        } else {
+            result.push_back(std::nullopt);
+        }
+    }
+    return result;
+}
+
+template<>
+const Fen<Glinski> Board<Glinski>::fen() const {
+    return Fen<V>{piecesSparse(), _mover, _optEpIndex, _currentCounter};
+}
+
+// ========================================
+// PieceType-based move generators
 
 template<>
 template<class OutputMoveIt>
-void Bitboard<Glinski>::getLeapMoves(
+void Board<Glinski>::getLeapMoves(
     OutputMoveIt moves_first,
     Index from, Color mover,
     PieceType pt, Indices dests
     ) const
 {
     // TODO: Implement method
-    throw NotImplementedException{};
+    throw NotImplementedException{"Board<Glinski>::getLeapMoves"};
 }
 
 template<>
 template<class OutputMoveIt>
-void Bitboard<Glinski>::getStandardPawnMoves(
+void Board<Glinski>::getStandardPawnMoves(
     OutputMoveIt moves_first,
     Index from,
     Color mover
     ) const
 {
     // TODO: Implement method
-    throw NotImplementedException{};
+    throw NotImplementedException{"Board<Glinski>::getStandardPawnMoves"};
 
     // for (Index to : pawnCaptures) {
     //     if (isEnemy(to)) {
@@ -193,7 +403,7 @@ void Bitboard<Glinski>::getStandardPawnMoves(
 
 template<>
 template<class OutputMoveIt>
-void Bitboard<Glinski>::getSlideMoves(
+void Board<Glinski>::getSlideMoves(
     OutputMoveIt moves_first,
     Index from,
     Color mover,
@@ -201,8 +411,8 @@ void Bitboard<Glinski>::getSlideMoves(
     const HexRays<Glinski>& rays
     ) const
 {
+    throw NotImplementedException{"Board<Glinski>::getSlideMoves"};
     // TODO: Implement method
-    throw NotImplementedException{};
     // for (HexRay ray : rays) {
     //     for (dest : ray) {
     //         if isEmpty(dest) {
@@ -220,7 +430,7 @@ void Bitboard<Glinski>::getSlideMoves(
 // ========================================
 
 template<>
-const string Bitboard<Glinski>::bitboard_string() /* const */ {
+const string Board<Glinski>::board_string() {
     ostringstream oss;
     int rowNum = 0;
     int cellsRemainingInRow = Glinski::fenRowLengths[rowNum];
@@ -265,43 +475,12 @@ const string Bitboard<Glinski>::bitboard_string() /* const */ {
 }
 
 template<>
-const string Bitboard<Glinski>::fen_string() /* const */ {
-    ostringstream oss;
-
-    int blankCount = 0;
-    int rowNum = 0;
-    int cellsRemainingInRow = Glinski::fenRowLengths[rowNum];
-    for (Index index : Glinski::fenOrderToIndex) {
-        if (isEmpty(index)) {
-            blankCount++;
-        } else {
-            if (blankCount > 0) {
-                oss << blankCount;
-                blankCount = 0;
-            }
-            Color c = getColorAt(index);
-            PieceType pt = getPieceTypeAt(index, c);
-            oss << ::hexchess::core::fen_string(c, pt);
-        }
-        cellsRemainingInRow--;
-
-        if (cellsRemainingInRow == 0) {
-            if (blankCount > 0) {
-                oss << blankCount;
-                blankCount = 0;
-            }
-            rowNum++;
-            if (rowNum < Glinski::ROW_COUNT) {
-                oss << '/';
-                cellsRemainingInRow = Glinski::fenRowLengths[rowNum];
-            }
-        }
-    }
-    return oss.str();
+const string Board<Glinski>::fen_string() const {
+    return Fen<V>{fen()}.fen_string();
 }
 
 template<>
-const string Bitboard<Glinski>::piecebits_string() /* const */ {
+const string Board<Glinski>::board_bits_string() /* const */ {
     ostringstream oss;
 
     oss << "Any Piece : " << reved(_anyPieceBits.to_string())  << "\n";
@@ -326,9 +505,12 @@ const string Bitboard<Glinski>::piecebits_string() /* const */ {
     return oss.str();
 }
 
+// ========================================
+// Move generation
+
 template<>
 template<class OutputMoveIt>
-void Bitboard<Glinski>::getPseudoLegalMoves(OutputMoveIt moves_first,
+void Board<Glinski>::getPseudoLegalMoves(OutputMoveIt moves_first,
     Index from, Color mover, PieceType pt
     ) const
 {
@@ -352,30 +534,86 @@ void Bitboard<Glinski>::getPseudoLegalMoves(OutputMoveIt moves_first,
         getStandardPawnMoves(moves_first, from, mover, pt);
         break;
     default:
-        throw std::logic_error("Bitboard: pseudoLegalDestinations: Unrecognized PieceType");
+        throw std::logic_error("Board: pseudoLegalDestinations: Unrecognized PieceType");
     }
 }
 
 template<>
-template<class OutputMoveIt>
-void Bitboard<Glinski>::getPseudoLegalMoves(OutputMoveIt moves_first, Color c) const {
+Moves Board<Glinski>::getPseudoLegalMoves(Color c) const {
     // TODO: Implement method
+    throw NotImplementedException{"Board<Glinski>::getPseudoLegalMoves"};
 }
 
 template<>
 template<class OutputMoveIt>
-void Bitboard<Glinski>::getLegalMoves(OutputMoveIt moves_first, Color c) const {
+void Board<Glinski>::getLegalMoves(OutputMoveIt move_first, Color c) const {
     // TODO: Implement method
+    throw NotImplementedException{"Board<Glinski>::getLegalMoves(Iterator, Color)"};
 }
 
 template<>
-ZHash Bitboard<Glinski>::zobristHash() const {
+Moves Board<Glinski>::getLegalMoves(Color c, const Moves& pseudoLegalMoves) const {
+    // TODO: Implement method
+    throw NotImplementedException{"Board<Glinski>::getLegalMoves(Color, const Move&)"};
+}
+
+template<>
+Moves Board<Glinski>::getLegalMoves(Color c) const {
+    // TODO: Implement method
+    throw NotImplementedException{"Board<Glinski>::getLegalMoves(Color)"};
+}
+
+// ========================================
+
+// template<>
+// bool Board<Glinski>::causesCheck(const Move& move) {
+//     throw NotImplementedException{"Board<Glinski>::causesCheck(Color)"};
+// }
+
+template<>
+bool Board<Glinski>::isDrawByStalemate() const {
+    throw NotImplementedException{"Board<Glinski>::isDrawByStalemate"};
+}
+
+template<>
+bool Board<Glinski>::isStalemate() const {
+    throw NotImplementedException{"Board<Glinski>::isStalemate"};
+}
+
+template<>
+bool Board<Glinski>::isPinned(Index tgtInd, Color c) const {
+    throw NotImplementedException{"Board<Glinski>::isPinned"};
+}
+
+template<>
+Indices Board<Glinski>::pinnningIndices(Index tgtInd, Color c) const {
+    throw NotImplementedException{"Board<Glinski>::pinningIndides"};
+}
+
+template<>
+const Indices& Board<Glinski>::attackers(Index index) const {
+    throw NotImplementedException{"Board<Glinski>::attackers"};
+}
+
+// ========================================
+
+
+template<>
+bool Board<Glinski>::isInsufficientResources() const {
+    throw NotImplementedException{"Board<Glinski>::insufficientResources"};
+}
+
+// ========================================
+// Zobrist hash generation
+
+template<>
+ZHash Board<Glinski>::zobristHash() const {
     ZHash result = 0;
     for (Index index = 0; index < V::CELL_COUNT; ++index) {
         if (!isEmpty(index)) {
             Color c = getColorAt(index);
             PieceType pt = getPieceTypeAt(index, c);
-            result ^= Zobrist<Glinski>::getZHash(index, c, pt);
+            result ^= Zobrist<V>::getZHash(index, c, pt);
         }
     }
     return result;

@@ -23,10 +23,12 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "fen.h"
 #include "geometry.h"
 #include "move.h"
 #include "util.h"
@@ -45,37 +47,44 @@ namespace hexchess::core {
 /// variant-specific board details, such as all the pseudo-legal moves available for a knight
 /// from each of the positions on the board.
 ///
-/// \todo Have all forms of Bitboard::init() either require the Bitboard is empty, or clear its contents.
-/// \todo Add a Bitboard constructor that takes a FEN string.
-/// \todo Add a Bitboard constructor that takes arguments that reflect the six components of a FEN string.
 /// \todo Extend class to be able to support flat-side variants (e.g., Brusky chess and De Vasa chess).
-/// \todo When adding support for Castling, consider adding a V::Bits field to Bitboard called unmovedKingsAndRooks.
-/// \todo Allow determining initial piece placement by FEN string
+/// \todo When adding support for Castling, consider adding a V::Bits field to Board called unmovedKingsAndRooks.
 template <typename Variant>
-class Bitboard {
+class Board {
 public:
     /// \brief typedef to make the Variant concisely available within the class.
     typedef Variant V;
 
-    Bitboard(bool doPopulate=true);
-    Bitboard(const Bitboard& other);
-    ~Bitboard() {}
-    Bitboard& operator=(const Bitboard& other) = delete;
+    Board(bool doPopulate=true);
+    Board(const Fen<V>& fen);
+    Board(const std::string& fenStr);
+    Board(const Board& other);
+    ~Board() {}
+    Board& operator=(const Board& other) = delete;
 
     // ========================================
     // Fundamental operations
 
-    bool init(std::vector<std::pair<Color, PieceType>>, HalfMoveCounter nonProgressCounter=0);
+    void initialize(const Fen<V>& fen);
 
-    bool init(const std::string& fen);
+    const std::string board_string() /* const */;
 
-    const std::string bitboard_string() /* const */;
+    void clear();
+
+    HalfMoveCounter currentCounter() const;
+
+    Color mover() const { return _mover; }
+
+    const std::string pgn_string() const;
 
     // Record current Board state in Forsyth-Edwards Notation (FEN)
-    const std::string fen_string() /* const */;
+    const std::string fen_board_string() const;
 
     // Record current Board state in Forsyth-Edwards Notation (FEN)
-    const std::string piecebits_string() /* const */;
+    const std::string fen_string() const;
+
+    // Record current Board state in Forsyth-Edwards Notation (FEN)
+    const std::string board_bits_string() /* const */;
 
     bool pieceCount();
     bool pieceCount(Color c);
@@ -85,49 +94,61 @@ public:
     PieceType getPieceTypeAt(Index index, Color c) const;
     PieceType getPieceTypeAt(Index index) const;
 
-    // Note: Sets the appropriate positions in this class's bitboards to true or false, depending on \p value.
+    // Note: Sets the appropriate positions in this class's boards to true or false, depending on \p value.
     void setPiece(Index index, Color c, PieceType pt, bool value);
 
-    /// \brief Sets the appropriate bits in this class's bitboards to reflect that the given piece has been added.
-    void addPiece(Index index, Color c, PieceType pt);
+    /// \brief Sets the appropriate bits in this class's boards to reflect that the given piece has been added.
+    void addPiece(Index index, Color c, PieceType pt, bool verbose=false);
 
-    /// \brief Zeroes the appropriate bits in this class's bitboards to reflect that the given piece has been removed.
+    /// \brief Resets bits in this class's boards to reflect that the given piece has been removed.
     void removePiece(Index index, Color c, PieceType pt);
 
+    void reset(bool doPopulate) {
+        clear();
+        if (doPopulate) {
+            Fen<V> fenInitial{Glinski::fenInitial};
+            initialize(fenInitial);
+        }
+    }
+
+    /// \todo Change return type to Fen<V>
+    const Fen<V> fen() const;
+
     // ========================================
+    // Piece locations
 
-    /// \brief Returns a Bitboard reflecting which board locations have any piece present.
-    const typename V::Bits anyPieceBits()              const { return _anyPieceBits;           }
+    /// \brief Returns a Board reflecting which board locations have any piece present.
+    const typename V::Bits anyPieceBits()              const { return _anyPieceBits;              }
 
-    /// \brief Returns a Bitboard reflecting which board locations have any piece of the specified color.
+    /// \brief Returns a Board reflecting which board locations have any piece of the specified color.
     const typename V::Bits anyPieceBits(const Color c) const { return _colorToAnyPieceBits.at(c); }
 
-    /// \brief Returns a Bitboard reflecting which board location(s) have a King of the specified color.
+    /// \brief Returns a Board reflecting which board location(s) have a King of the specified color.
     const typename V::Bits kingBits(const Color c)     const { return _colorToKingBits.at(c);     }
 
-    /// \brief Returns a Bitboard reflecting which board location(s) have a Queen of the specified color.
-    const typename V::Bits queenBits(const Color c)    const { return _colorToQueenBits.at(c);    }
+    /// \brief Returns a Board reflecting which board location(s) have a Queen of the specified color.
+    const typename V::Bits queenBits(const Color c)    const { return _colorToQueenBits.at(c);     }
 
-    /// \brief Returns a Bitboard reflecting which board location(s) have a Rook of the specified color.
-    const typename V::Bits rookBits(const Color c)     const { return _colorToRookBits.at(c);     }
+    /// \brief Returns a Board reflecting which board location(s) have a Rook of the specified color.
+    const typename V::Bits rookBits(const Color c)     const { return _colorToRookBits.at(c);      }
 
-    /// \brief Returns a Bitboard reflecting which board location(s) have a Bishop of the specified color.
-    const typename V::Bits bishopBits(const Color c)   const { return _colorToBishopBits.at(c);   }
+    /// \brief Returns a Board reflecting which board location(s) have a Bishop of the specified color.
+    const typename V::Bits bishopBits(const Color c)   const { return _colorToBishopBits.at(c);    }
 
-    /// \brief Returns a Bitboard reflecting which board location(s) have a Knight of the specified color.
-    const typename V::Bits knightBits(const Color c)   const { return _colorToKnightBits.at(c);   }
+    /// \brief Returns a Board reflecting which board location(s) have a Knight of the specified color.
+    const typename V::Bits knightBits(const Color c)   const { return _colorToKnightBits.at(c);    }
 
-    /// \brief Returns a Bitboard reflecting which board location(s) have a Pawn of the specified color.
-    const typename V::Bits pawnBits(const Color c)     const { return _colorToPawnBits.at(c);     }
+    /// \brief Returns a Board reflecting which board location(s) have a Pawn of the specified color.
+    const typename V::Bits pawnBits(const Color c)     const { return _colorToPawnBits.at(c);      }
 
-    /// \brief Returns a Bitboard reflecting which board location has an en passant cell.
+    /// \brief Returns a Board reflecting which board location has an en passant cell.
     ///
     /// (Definition: An en passant cell is one that was skipped over by a Pawn in the opponent's
     /// previous move, in a variant that supports en passant capture.)
     const typename V::Bits enPassantBits() const { return _enPassantBits; }
 
     /// \brief Returns a boolean reflecting which board location(s) have a Pawn of the specified color.
-    bool isAnyPieceAtIndex(const Index index)              const { return _anyPieceBits.test(index);              }
+    bool isAnyPieceAt(const Index index)               const { return _anyPieceBits.test(index);   }
 
     /// \brief Returns a boolean reflecting whether a piece with Color \p c is present at Index \p index.
     bool isColorAtIndex(const Index index, const Color c)  const { return _colorToAnyPieceBits.at(c).test(index); }
@@ -174,11 +195,24 @@ public:
     /// \brief Returns the number of Pawns on the board with Color \p c.
     Short pawnCount(Color c)     const { return _colorToPawnBits[c].count();     }
 
+    bool isCastlingAvailable(Color c) {
+        return _colorToRookCastlingAvailabilityBits.at(c).any();
+    }
+
     /// \brief Returns true if the board is empty; otherwise, false.
-    bool isEmpty() const { return anyPieceBits() == V::zeroBits; }
+    bool isEmpty() const { return anyPieceBits().none(); }
 
     /// \brief Returns true if location \p index is empty; otherwise, false.
     bool isEmpty(Index index) const { return !anyPieceBits()[index]; }
+
+    /// \brief Returns whether mover is in check (inclusive of checkmate).
+    bool isCheck() const;
+
+    bool isInsufficientResources() const;
+
+    Index getKingIndex(Color c) const { return _colorToKingIndex.at(c); }
+
+    void setKingIndex(Color c, Index index) { _colorToKingIndex[c] = index; }
 
     /// \brief Returns the Zobrist hash of the board, given its current layout.
     ZHash zobristHash() const;
@@ -186,23 +220,47 @@ public:
     // ========================================
     // Piece movement data stored as Bits and Indices
 
-    /// \brief Returns a lookup for Player \c: Which cells allow a Pawn to advance one cell forward.
+    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance one cell forward.
     typename V::Bits pawnAdvance1Indices(Color c) {
-        return _colorToPawnAdvance1Indices[c];
+        return V::_colorToPawnAdvance1Indices[c];
     }
 
-    /// \brief Returns a lookup for Player \c: Which cells allow a Pawn to advance two cells forward.
-    typename V::Bits pawnAdvance2BIndices(Color c) {
-        return _colorToPawnAdvance2Indices[c];
+    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
+    typename V::Bits pawnAdvance2Indices(Color c) {
+        return V::_colorToPawnAdvance2Indices[c];
     }
 
-    /// \brief Returns a lookup for Player \c: Which cells allow a Pawn to advance two cells forward.
+    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
     typename V::Bits pawnCaptureBits(Color c) {
-        return _colorToPawnCaptureBits[c];
+        return V::_colorToPawnCaptureBits[c];
     }
 
     // ========================================
-    // Get moves
+    // Compute move information
+
+    // bool causesCheck(const Move& move);
+
+    bool isCheckExclusive() const {
+        return isCheckInclusive() && !isCheckmate();
+    }
+
+    bool isCheckmate() const;
+
+    bool isCheckInclusive() const;
+
+    bool isDrawByStalemate() const;
+
+    bool isStalemate() const;
+
+    /// \todo Implement Board::isPinned to support pinning as a board valuation feature
+    bool isPinned(Index tgtInd, Color c) const;
+
+    /// \todo Implement pinningIndices to support pinning as a board valuation feature
+    Indices pinnningIndices(Index tgtInd, Color c) const;
+
+    bool isAttacking(Index from, Color, PieceType pt, Index tgt) const;
+
+    const Indices& attackers(Index index) const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     "leaper" piece at location \p index with PieceType \pt and Color \c.
@@ -238,19 +296,42 @@ public:
         Index index, Color c, PieceType pt
         ) const;
 
-    /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for
-    ///     all pieces of the specified Color \c.
+    /// \todo PERFORMANCE: Check if this should direct output to an iterator argument
     template<class OutputMoveIt>
     void getPseudoLegalMoves(OutputMoveIt moves_first, Color c) const;
 
-    /// \brief Outputs to \p moves_first (a collection of Move objects) the legal moves
-    ///     for all pieces of the specified Color \p c.
+    Moves getPseudoLegalMoves(Color c) const;
+
     template<class OutputMoveIt>
     void getLegalMoves(OutputMoveIt moves_first, Color c) const;
 
-private:
-    Color mover;
+    Moves getLegalMoves(Color c, const Moves& pseudoLegalMoves) const;
 
+    Moves getLegalMoves(Color c) const;
+
+    void moveMake(const Move& move);
+    void moveRedo(const Move& move);
+    void moveUndo(const Move& move);
+
+    bool isRepetition() {}
+
+    bool isDraw() { }
+    bool isDrawBy3xRepetition() { }
+    bool isDrawBy50NonProgressMoves() { }
+
+    bool isCastlingAvailable() {
+        return false;
+        // TODO: Implement castling: return rookCastlingAvailabilityBits.any();
+    }
+
+    PiecesDense piecesDense() const;
+    PiecesSparse piecesSparse() const;
+
+private:
+    // Setup
+    // Fen<V> _fenInitial;
+
+    // ========== Piece placement
     typename V::Bits _anyPieceBits;
     std::map<Color, typename V::Bits> _colorToAnyPieceBits;
     std::map<Color, typename V::Bits> _colorToKingBits;
@@ -260,11 +341,33 @@ private:
     std::map<Color, typename V::Bits> _colorToKnightBits;
     std::map<Color, typename V::Bits> _colorToPawnBits;
 
-    std::map<Color, std::map<Index, Index>> _colorToPawnAdvance1Indices;
-    std::map<Color, std::map<Index, Index>> _colorToPawnAdvance2Indices;
-    std::map<Color, typename V::Bits> _colorToPawnCaptureBits;
+    std::map<Color, Index> _colorToKingIndex;
 
-    typename V::Bits _enPassantBits;
+    // ========== Game state
+    Color _mover = Color::Black;
+    // When a Rook is moved from index, and this Bits tests true at index, then that bit should be cleared.
+    // When a King is moved, this Bits value should be cleared.
+    std::map<Color, typename V::Bits> _colorToRookCastlingAvailabilityBits;
+
+    // \todo Choose e.p. representation(s)
+    OptIndex _optEpIndex{std::nullopt};
+    typename V::Bits _enPassantBits{0};
+
+    // ========== Game history
+    /// \brief History of the game's moves
+
+    /// \brief For each HalfMoveCounter, counter ticks since capture or Pawn move.
+    Shorts _nonProgressCounters{};
+    HalfMoveCounter _currentCounter{1};
+
+    Moves _moveStack{};
+    std::map<ZHash, std::vector<HalfMoveCounter>> _zHashToCounters{};  // To track repeats
+    std::vector<ZHash> _zHashes{};  // One per counter, to track when a repeated Board position occurred
+
+    // TODO: Useful cached computed info?
+    CheckStatus _checkStatus{CheckStatus::Unknown};
+    Moves _legalMoves{};
+    Moves _pseudoLegalMoves{};
 };
 
 } // namespace hexchess::core
