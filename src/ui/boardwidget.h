@@ -28,13 +28,12 @@
 
 #include "util_hexchess.h"
 #include "variant.h"
-#include "bitboard.h"
+#include "board.h"
 
 #include "stylecolor.h"
 #include "stylemeasure.h"
 
-
-using hexchess::core::Bitboard;
+using hexchess::core::Board;
 using hexchess::core::Glinski;
 using hexchess::core::Index;
 using hexchess::core::OptPieceType;
@@ -90,5 +89,5 @@ private:
     };
 
     std::vector<Cell> cells;
-    Bitboard<Glinski> bitboard{};
+    Board<Glinski> board{};
 };

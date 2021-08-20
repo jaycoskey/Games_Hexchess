@@ -19,7 +19,6 @@
 #include "util_hexchess.h"
 #include "styleicon.h"
 
-
 using hexchess::core::Color;
 using hexchess::core::PieceType;
 

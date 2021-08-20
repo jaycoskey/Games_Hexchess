@@ -24,5 +24,4 @@ using hexchess::core::PieceType;
 
 using IconPaths = std::map<Color, std::map<PieceType, std::string>>;
 
-
 extern IconPaths iconSettings;

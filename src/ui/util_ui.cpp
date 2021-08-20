@@ -18,10 +18,9 @@
 #include "util.h"  // For pi
 #include "util_ui.h"  // For Real
 
-
 using std::vector;
 
-using hexchess::core::pi;
+using hexchess::pi;
 
 
 vector<Real> cos_at{ []() {

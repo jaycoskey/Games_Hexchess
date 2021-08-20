@@ -23,7 +23,6 @@
 enum class MeasureEnum;
 using MeasureSettings = std::map<MeasureEnum, Real>;
 
-
 enum class MeasureEnum {
     Board_BorderWidth,
     Board_Margin,

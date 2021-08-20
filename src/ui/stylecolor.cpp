@@ -23,7 +23,6 @@
 #include "variant.h"
 #include "stylecolor.h"
 
-
 using hexchess::core::Glinski;
 using hexchess::core::Index;
 

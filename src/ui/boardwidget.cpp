@@ -37,7 +37,6 @@
 #include "stylemeasure.h"
 #include "util_ui.h"
 
-
 using std::cout;
 using std::string;
 
@@ -123,10 +122,10 @@ void BoardWidget::paintEvent(QPaintEvent *event)
 
         // SVG
         Index index = cell.index;
-        if (!bitboard.isEmpty(cell.index)) {
+        if (!board.isEmpty(cell.index)) {
             /// \todo Get piece SVGs to render inside Cells
-            Color c = bitboard.getColorAt(index);
-            PieceType pt = bitboard.getPieceTypeAt(index);
+            Color c = board.getColorAt(index);
+            PieceType pt = board.getPieceTypeAt(index);
             string iconPath = iconSettings[c][pt];
             QString qIconPath = QString::fromStdString(iconPath);
             QSvgRenderer renderer(qIconPath);

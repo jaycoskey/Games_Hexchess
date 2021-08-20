@@ -15,7 +15,7 @@
 
 #include <QApplication>
 
-#include "bitboard.h"
+#include "board.h"
 
 #include "ui/boardwidget.h"
 #include "ui/mainWindow.h"

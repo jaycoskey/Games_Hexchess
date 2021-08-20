@@ -24,7 +24,6 @@
 
 #include "util_hexchess.h"
 
-
 using CellStatus = ushort;
 using Real = float;
 

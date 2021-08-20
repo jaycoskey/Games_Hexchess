@@ -20,12 +20,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 QT += gui svg widgets
 QMAKE_CXX = clang++
 QMAKE_CXXFLAGS += -std=c++17 -g -fPIC
-INCLUDEPATH += core
-
-CORE=core
+INCLUDEPATH += core ui
+OBJECTS_DIR = obj
+DESTDIR = obj
 
 HEADERS += \
-    core/bitboard.h core/geometry.h core/variant.h core/zobrist.h \
+    core/board.h core/fen.h core/geometry.h core/move.h core/variant.h core/zobrist.h \
     \
     ui/mainWindow.h ui/boardwidget.h \
     ui/stylecolor.h ui/stylefont.h ui/styleicon.h ui/stylemeasure.h \
@@ -33,8 +33,10 @@ HEADERS += \
 
 SOURCES += main.cpp \
     \
-    core/bitboard.cpp \
+    core/board.cpp \
+    core/fen.cpp \
     core/geometry.cpp \
+    core/move.cpp \
     core/util_hexchess.cpp \
     core/variant.cpp \
     core/zobrist.cpp \

@@ -21,7 +21,6 @@
 
 #include "util_hexchess.h"
 
-
 using hexchess::core::Index;
 
 
