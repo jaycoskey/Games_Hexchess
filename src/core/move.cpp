@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cassert>
+
 #include <iostream>
 
 #include "move.h"
@@ -32,7 +34,7 @@ Move& Move::operator=(const Move& other) {
         _moveEnum = other._moveEnum;
         _optCaptured = other._optCaptured;
         _optPromotedTo = other._optPromotedTo;
-        _checkStatus = other._checkStatus;
+        _optCheckEnum = other._optCheckEnum;
 
         // _mover = other.mover();
         // _pieceType = other.pieceType();
@@ -46,9 +48,14 @@ Move& Move::operator=(const Move& other) {
     return *this;
 }
 
-bool Move::isCheckInclusive() const {
-    return _checkStatus == CheckStatus::Check
-        || _checkStatus == CheckStatus::Checkmate;
+bool Move::isCheck() const {
+    assert(_optCheckEnum.has_value());
+    return _optCheckEnum.value() == CheckEnum::Check;
+}
+
+bool Move::isCheckmate() const {
+    assert(_optCheckEnum.has_value());
+    return _optCheckEnum.value() == CheckEnum::Checkmate;
 }
 
 bool Move::isProgressMove() const {
@@ -69,8 +76,20 @@ const std::string Move::move_lan_string() const {
     if (isEnPassant()) { result += "ep"; }
     if (isPromotion()) { result += string{'='} + piece_type_string(_optPromotedTo.value()); }
 
-    if (isCheckExclusive()) { result += "+"; }
+    if (isCheck()) { result += "+"; }
     if (isCheckmate()) { result += "#"; }
+    return result;
+}
+
+bool operator==(const Move& a, const Move& b) {
+    bool result = a._mover == b._mover
+                && a._pieceType == b._pieceType
+                && a._from == b._from
+                && a._to == b._to
+                && a._moveEnum == b._moveEnum
+                && a._optCaptured == b._optCaptured
+                && a._optPromotedTo == b._optPromotedTo
+                && a._optCheckEnum == b._optCheckEnum;
     return result;
 }
 
