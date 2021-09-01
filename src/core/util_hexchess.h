@@ -59,9 +59,13 @@ using HexCoord = Short;
 /// a capture or Pawn move is called nonProgressCounters.
 using HalfMoveCounter = Short;
 
-using PieceValue = int;
+using Score = double;  // For game scores, including 0.5-0.5
 
 using Strings = std::vector<std::string>;
+
+/// \brief A measure of value of a piece, or a board.
+///        Currently expressed as millipawns.
+using Value = int;
 
 // ========================================
 // Enums
@@ -98,6 +102,7 @@ enum class Color {
     Black,
     White
 };
+using OptColor = std::optional<Color>;
 inline Color opponent(Color c) { return c == Color::Black ? Color::White : Color::Black; }
 const std::string color_string(Color c);
 inline std::ostream& operator<<(std::ostream& os, Color c) {
@@ -126,6 +131,7 @@ constexpr PieceType pieceTypes[6] {
     PieceType::Knight,
     PieceType::Pawn
 };
+using PieceTypes = std::vector<PieceType>;  // For listing available promotion types
 PieceType piece_type_parse(char ch);
 const std::string piece_type_string(PieceType pt);
 
