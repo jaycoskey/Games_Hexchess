@@ -26,9 +26,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "fen.h"
+#include "game_outcome.h"
 #include "geometry.h"
 #include "move.h"
 #include "util.h"
@@ -55,44 +57,8 @@ public:
     /// \brief typedef to make the Variant concisely available within the class.
     typedef Variant V;
 
-    Board(bool doPopulate=true);
-    Board(const Fen<V>& fen);
-    Board(const std::string& fenStr);
-    Board(const Board& other);
-    ~Board() {}
-    Board& operator=(const Board& other) = delete;
-
     // ========================================
-    // Fundamental operations
-
-    void initialize(const Fen<V>& fen);
-
-    const std::string board_string() /* const */;
-
-    void clear();
-
-    HalfMoveCounter currentCounter() const;
-
-    Color mover() const { return _mover; }
-
-    const std::string pgn_string() const;
-
-    // Record current Board state in Forsyth-Edwards Notation (FEN)
-    const std::string fen_board_string() const;
-
-    // Record current Board state in Forsyth-Edwards Notation (FEN)
-    const std::string fen_string() const;
-
-    // Record current Board state in Forsyth-Edwards Notation (FEN)
-    const std::string board_bits_string() /* const */;
-
-    bool pieceCount();
-    bool pieceCount(Color c);
-
-    // Note: Adding one more level to the decision tree (e.g., testing non-Pawns for isBN) doesn't pay off.
-    Color getColorAt(Index index) const;
-    PieceType getPieceTypeAt(Index index, Color c) const;
-    PieceType getPieceTypeAt(Index index) const;
+    // Constructor support
 
     // Note: Sets the appropriate positions in this class's boards to true or false, depending on \p value.
     void setPiece(Index index, Color c, PieceType pt, bool value);
@@ -102,20 +68,55 @@ public:
 
     /// \brief Resets bits in this class's boards to reflect that the given piece has been removed.
     void removePiece(Index index, Color c, PieceType pt);
-
-    void reset(bool doPopulate) {
-        clear();
-        if (doPopulate) {
-            Fen<V> fenInitial{Glinski::fenInitial};
-            initialize(fenInitial);
-        }
-    }
-
-    /// \todo Change return type to Fen<V>
-    const Fen<V> fen() const;
+    void initialize(const Fen<V>& fen);
 
     // ========================================
-    // Piece locations
+    // Constructors
+
+    Board(bool doPopulate=true);
+    Board(const Fen<V>& fen);
+    Board(const std::string& fenStr);
+    Board(const Board& other);
+    ~Board() {}
+    Board& operator=(const Board& other) = default;  // TODO: Implement
+
+    // ========================================
+    // Fundamental operations
+
+    void clear();
+    void reset(bool doPopulate);
+
+    // ========================================
+    // Non-piece data
+
+    HalfMoveCounter currentCounter() const;
+    Color mover() const { return _mover; }
+
+    // ========================================
+    // Write piece data
+
+    void setKingIndex(Color c, Index index) { _colorToKingIndex[c] = index; }
+
+    // ========================================
+    // Piece movement capatibilities (stored as Bits and Indices)
+
+    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance one cell forward.
+    Indices pawnAdvance1Indices(Index from, Color c) const {
+        return V::_colorToPawnAdvance1Indices.at(c).at(from);
+    }
+
+    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
+    Indices pawnAdvance2Indices(Index from, Color c) const {
+        return V::_colorToPawnAdvance2Indices.at(c).at(from);
+    }
+
+    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
+    Indices pawnCaptureBits(Index from, Color c) const {
+        return V::_colorToPawnCaptureBits.at(c).at(from);
+    }
+
+    // ========================================
+    // Read piece data
 
     /// \brief Returns a Board reflecting which board locations have any piece present.
     const typename V::Bits anyPieceBits()              const { return _anyPieceBits;              }
@@ -141,41 +142,43 @@ public:
     /// \brief Returns a Board reflecting which board location(s) have a Pawn of the specified color.
     const typename V::Bits pawnBits(const Color c)     const { return _colorToPawnBits.at(c);      }
 
-    /// \brief Returns a Board reflecting which board location has an en passant cell.
-    ///
-    /// (Definition: An en passant cell is one that was skipped over by a Pawn in the opponent's
-    /// previous move, in a variant that supports en passant capture.)
-    const typename V::Bits enPassantBits() const { return _enPassantBits; }
+    // ========================================
+    // Piece index queries
 
     /// \brief Returns a boolean reflecting which board location(s) have a Pawn of the specified color.
-    bool isAnyPieceAt(const Index index)               const { return _anyPieceBits.test(index);   }
+    bool isPieceAt(const Index index)                 const { return _anyPieceBits.test(index);   }
 
     /// \brief Returns a boolean reflecting whether a piece with Color \p c is present at Index \p index.
-    bool isColorAtIndex(const Index index, const Color c)  const { return _colorToAnyPieceBits.at(c).test(index); }
+    bool isPieceAt(const Index index, const Color c)  const { return _colorToAnyPieceBits.at(c).test(index); }
 
     /// \brief Returns a boolean reflecting whether a King with Color \p c is present at Index \p index.
-    bool isKingAtIndex(const Index index, const Color c)   const { return _colorToKingBits.at(c).test(index);      }
+    bool isKingAt(const Index index, const Color c)   const { return _colorToKingBits.at(c).test(index);      }
 
     /// \brief Returns a boolean reflecting whether a Queen with Color \p c is present at Index \p index.
-    bool isKQueenAtIndex(const Index index, const Color c) const { return _colorToQueenBits.at(c).test(index);     }
+    bool isQueenAt(const Index index, const Color c) const { return _colorToQueenBits.at(c).test(index);     }
 
     /// \brief Returns a boolean reflecting whether a Rook with Color \p c is present at Index \p index.
-    bool isRookAtIndex(const Index index, const Color c)   const { return _colorToRookBits.at(c).test(index);      }
+    bool isRookAt(const Index index, const Color c)   const { return _colorToRookBits.at(c).test(index);      }
 
     /// \brief Returns a boolean reflecting whether a Bishop with Color \p c is present at Index \p index.
-    bool isBishopAtIndex(const Index index, const Color c) const { return _colorToBishopBits.at(c).test(index);    }
+    bool isBishopAt(const Index index, const Color c) const { return _colorToBishopBits.at(c).test(index);    }
 
     /// \brief Returns a boolean reflecting whether a Knight with Color \p c is present at Index \p index.
-    bool isKnightAtIndex(const Index index, const Color c) const { return _colorToKnightBits.at(c).test(index);    }
+    bool isKnightAt(const Index index, const Color c) const { return _colorToKnightBits.at(c).test(index);    }
 
     /// \brief Returns a boolean reflecting whether a Pawn with Color \p c is present at Index \p index.
-    bool isPawnAtIndex(const Index index, const Color c)   const { return _colorToPawnBits.at(c).test(index);      }
+    bool isPawnAt(const Index index, const Color c)   const { return _colorToPawnBits.at(c).test(index);      }
+
+    Index getKingIndex(Color c) const { return _colorToKingIndex.at(c); }
+
+    // ========================================
+    // Piece counts
 
     /// \brief Returns the number of pieces on the board.
-    Short anyPieceCount()        const { return _anyPieceBits.count();           }
+    Short pieceCount()           const { return _anyPieceBits.count();           }
 
     /// \brief Returns the number of pieces on the board with Color \p c.
-    Short anyPieceCount(Color c) const { return _colorToAnyPieceBits[c].count(); }
+    Short pieceCount(Color c)    const { return _colorToAnyPieceBits[c].count(); }
 
     /// \brief Returns the number of Kings on the board with Color \p c.
     Short kingCount(Color c)     const { return _colorToKingBits[c].count();     }
@@ -195,9 +198,19 @@ public:
     /// \brief Returns the number of Pawns on the board with Color \p c.
     Short pawnCount(Color c)     const { return _colorToPawnBits[c].count();     }
 
-    bool isCastlingAvailable(Color c) {
-        return _colorToRookCastlingAvailabilityBits.at(c).any();
-    }
+    // ========================================
+    // Other piece location methods
+
+    Color getColorAt(Index index) const;
+    PieceType getPieceTypeAt(Index index, Color c) const;
+    PieceType getPieceTypeAt(Index index) const;
+
+    PiecesDense piecesDense() const;
+    PiecesDense piecesDense(Color c) const;
+    PiecesSparse piecesSparse() const;
+
+    /// \todo Change return type to Fen<V>
+    const Fen<V> fen() const;
 
     /// \brief Returns true if the board is empty; otherwise, false.
     bool isEmpty() const { return anyPieceBits().none(); }
@@ -205,78 +218,46 @@ public:
     /// \brief Returns true if location \p index is empty; otherwise, false.
     bool isEmpty(Index index) const { return !anyPieceBits()[index]; }
 
-    /// \brief Returns whether mover is in check (inclusive of checkmate).
-    bool isCheck() const;
-
-    bool isInsufficientResources() const;
-
-    Index getKingIndex(Color c) const { return _colorToKingIndex.at(c); }
-
-    void setKingIndex(Color c, Index index) { _colorToKingIndex[c] = index; }
+    // ========================================
+    // Board hashing
 
     /// \brief Returns the Zobrist hash of the board, given its current layout.
     ZHash zobristHash() const;
 
-    // ========================================
-    // Piece movement data stored as Bits and Indices
-
-    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance one cell forward.
-    typename V::Bits pawnAdvance1Indices(Color c) {
-        return V::_colorToPawnAdvance1Indices[c];
-    }
-
-    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
-    typename V::Bits pawnAdvance2Indices(Color c) {
-        return V::_colorToPawnAdvance2Indices[c];
-    }
-
-    /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
-    typename V::Bits pawnCaptureBits(Color c) {
-        return V::_colorToPawnCaptureBits[c];
-    }
+    bool isRepetition() const;
 
     // ========================================
-    // Compute move information
+    // String methods
 
-    // bool causesCheck(const Move& move);
+    // Record current Board state in Forsyth-Edwards Notation (FEN)
+    const std::string board_bits_string() /* const */;
 
-    bool isCheckExclusive() const {
-        return isCheckInclusive() && !isCheckmate();
-    }
+    const std::string board_pgn_string() const;
 
-    bool isCheckmate() const;
+    const std::string board_string() /* const */;
 
-    bool isCheckInclusive() const;
+    // Record current Board state in Forsyth-Edwards Notation (FEN)
+    const std::string fen_string() const;
 
-    bool isDrawByStalemate() const;
+    // ========================================
+    // Finding, getting, and caching moves
 
-    bool isStalemate() const;
-
-    /// \todo Implement Board::isPinned to support pinning as a board valuation feature
-    bool isPinned(Index tgtInd, Color c) const;
-
-    /// \todo Implement pinningIndices to support pinning as a board valuation feature
-    Indices pinnningIndices(Index tgtInd, Color c) const;
-
-    bool isAttacking(Index from, Color, PieceType pt, Index tgt) const;
-
-    const Indices& attackers(Index index) const;
+    void recordObstructedHexRayCore(Index obsIndex, Index rayStart, const HexDir& rayDir) const;
+    const HexRayCores& getObstructedHexRayCores(Index obsIndex) const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     "leaper" piece at location \p index with PieceType \pt and Color \c.
     ///
     /// (The possible destinations of the piece are passed in as the argument \p dests.)
-    template<class OutputMoveIt>
-    void getLeapMoves(OutputMoveIt moves_first,
-        Index from, Color mover, PieceType pt, Indices dests
+    void findLeapMoves(/* out */ Moves& moves,
+        Index from, Color mover, PieceType pt, const Indices& dests
         ) const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     "slider" piece at location \p index with PieceType \pt and Color \c.
     ///
     /// (The possible slide directions of the piece are passed in as the argument \p rays.)
-    template<class OutputMoveIt>
-    void getSlideMoves(OutputMoveIt moves_first,
+    void findSlideMoves(/* out */ Moves& moves,
         Index from, Color mover, PieceType pt, const HexRays<V>& rays
         ) const;
 
@@ -284,54 +265,117 @@ public:
     ///     Pawn at location \p index with Color \c.
     ///
     /// (The Variant class has info on the Pawn's available advance and capture capabilities.)
-    template<class OutputMoveIt>
-    void getStandardPawnMoves(OutputMoveIt moves_first,
+    void findStandardPawnMoves(/* out */ Moves& moves,
         Index from, Color mover
         ) const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     piece with PieceType \pt and Color \c at location \index.
-    template<class OutputMoveIt>
-    void getPseudoLegalMoves(OutputMoveIt moves_first,
+    void findPseudoLegalMoves(/* out */ Moves& moves,
         Index index, Color c, PieceType pt
         ) const;
 
     /// \todo PERFORMANCE: Check if this should direct output to an iterator argument
-    template<class OutputMoveIt>
-    void getPseudoLegalMoves(OutputMoveIt moves_first, Color c) const;
+    void findPseudoLegalMoves(/* out */ Moves& moves, Color c) const;
 
-    Moves getPseudoLegalMoves(Color c) const;
+    void recordPseudoLegalMoves(const Moves& moves) const;
+    Moves getPseudoLegalMoves(Color mover) const;  // Get through cache
 
-    template<class OutputMoveIt>
-    void getLegalMoves(OutputMoveIt moves_first, Color c) const;
+    // ----------------------------------------
 
-    Moves getLegalMoves(Color c, const Moves& pseudoLegalMoves) const;
+    bool isOwnKingAttackedAfterOwnMove(Color mover, Index from, Index to) const;
+    void findLegalMoves(/* out */ Moves& moves, Color c, const Moves& pseudoLegalMoves) const;
+    void recordLegalMoves(const Moves& moves) const;
+    Moves getLegalMoves(Color mover) const;  // Get through cache
 
-    Moves getLegalMoves(Color c) const;
+    bool isAttacked(Index tgtIndex, Color tgtColor) const;
+    bool isAttacking(Index from, Color, PieceType pt, Index tgt) const;
 
-    void moveMake(const Move& move);
-    void moveRedo(const Move& move);
-    void moveUndo(const Move& move);
+    // ----------------------------------------
 
-    bool isRepetition() {}
+    CheckEnum getCheckEnum() const;
+    void recordCheckEnum(CheckEnum checkEnum) const;
 
-    bool isDraw() { }
-    bool isDrawBy3xRepetition() { }
-    bool isDrawBy50NonProgressMoves() { }
+    // ----------------------------------------
 
+    OptGameOutcome getOptOutcome() const { return _cache.optOutcome; }
+    void recordOutcome(const GameOutcome& gameOutcome) const;
+    GameOutcome getOutcome() const { return _cache.optOutcome; }
+
+    // ----------------------------------------
+
+    bool getIsGameOver() const;
+
+    // ========================================
+    // Move execution
+
+    void moveExec(Move& move);
+    // \todo Implement: void moveRedo(const Move& move);
+    // \todo Implement: void moveUndo(const Move& move);
+
+    // ========================================
+    // Reading and writing game state
+
+    const Indices& attackers(Index tgtInd, const Moves& moves) const;
+
+    // bool causesCheck(const Move& move);
+
+    // TODO: Add support for castling
+    // When a Rook is moved from index, and this Bits tests true at index,
+    //     then that bit should be cleared.
+    // When a King is moved, this Bits value should be cleared.
+    // std::map<Color, typename V::Bits> _colorToRookCastlingAvailabilityBits;
+    // bool isCastlingAvailable(Color c) {
+    //     return _colorToRookCastlingAvailabilityBits.at(c).any();
+    // }
     bool isCastlingAvailable() {
         return false;
         // TODO: Implement castling: return rookCastlingAvailabilityBits.any();
     }
 
-    PiecesDense piecesDense() const;
-    PiecesSparse piecesSparse() const;
+    /// \brief Returns whether mover is in check (inclusive of checkmate).
+    bool isCheck() const;
+
+    bool isCheckmate() const;
+
+    bool isDraw() const {
+        if (_cache.getOutcome() == std::nullopt) {
+            return false;
+        }
+        Termination term = getOptOutcome().value().termination;
+        return term == Termination::Draw_3xBoardRepetition
+                    || term == Termination::Draw_50MoveRule
+            || term == Termination::Draw_InsufficientResources || term == Termination::Draw_Stalemate;
+    }
+
+    bool isDrawBy3xBoardRepetition() {
+        if (_cache.getOutcome() == std::nullopt) { return false; }
+        return getOptOutcome().value().termination == Termination::Draw_3xBoardRepetition;
+    }
+
+    bool isDrawBy50NonProgressMoves() const {
+        if (_cache.getOutcome() == std::nullopt) { return false; }
+        return getOptOutcome().value().termination == Termination::Draw_50MoveRule;
+    }
+
+    bool isDrawByInsufficientResources() const;
+
+    bool isDrawByStalemate() const;
+
+    bool isGameOver() const { return getOptOutcome() != std::nullopt; }
+
+    /// \todo Implement Board::isPinned to support pinning as a board valuation feature
+    // bool isPinned(Index tgtInd, Color c) const;
+
+    /// \todo Implement pinningIndices to support pinning as a board valuation feature
+    // Indices pinnningIndices(Index tgtInd, Color c) const;
+
+    void setMoveCheckEnum(Move& move);
 
 private:
-    // Setup
-    // Fen<V> _fenInitial;
+    // =======================================
+    // Piece locations
 
-    // ========== Piece placement
     typename V::Bits _anyPieceBits;
     std::map<Color, typename V::Bits> _colorToAnyPieceBits;
     std::map<Color, typename V::Bits> _colorToKingBits;
@@ -343,31 +387,82 @@ private:
 
     std::map<Color, Index> _colorToKingIndex;
 
-    // ========== Game state
-    Color _mover = Color::Black;
-    // When a Rook is moved from index, and this Bits tests true at index, then that bit should be cleared.
-    // When a King is moved, this Bits value should be cleared.
-    std::map<Color, typename V::Bits> _colorToRookCastlingAvailabilityBits;
+    // =======================================
+    // Move piece support
 
-    // \todo Choose e.p. representation(s)
+    void _moveBit(std::map<Color, typename Glinski::Bits>& bits,
+        Color mover, Index from, Index to);
+
+    void _moveBit(typename Glinski::Bits& bits,
+        Index from, Index to);
+
+    // =======================================
+    // Non-piece data
+
+    Color _mover /* = Color::Black */;
+
+    /// \brief Returns which board location (if any) has an en passant cell.
+    ///
+    /// (Definition: An en passant cell is one that was skipped over by a Pawn in the opponent's
+    /// previous move, in a variant that supports en passant capture.)
+    /// Put en passant code here
     OptIndex _optEpIndex{std::nullopt};
-    typename V::Bits _enPassantBits{0};
 
-    // ========== Game history
-    /// \brief History of the game's moves
+    // =======================================
+    // Game history
+
+    Moves _moveStack{};
 
     /// \brief For each HalfMoveCounter, counter ticks since capture or Pawn move.
+    Short _nonProgressCounter{0};
     Shorts _nonProgressCounters{};
     HalfMoveCounter _currentCounter{1};
 
-    Moves _moveStack{};
+    // Hash history
     std::map<ZHash, std::vector<HalfMoveCounter>> _zHashToCounters{};  // To track repeats
     std::vector<ZHash> _zHashes{};  // One per counter, to track when a repeated Board position occurred
 
-    // TODO: Useful cached computed info?
-    CheckStatus _checkStatus{CheckStatus::Unknown};
-    Moves _legalMoves{};
-    Moves _pseudoLegalMoves{};
+    // =======================================
+    // Caching
+
+    /// Each cache item is initliazed to empty, and filled via getter calls.
+    /// This caching layer allows (computer) Players to determine if and when
+    ///     they compute this info for games inspected during game tree search.
+    struct Cache {
+        Cache()
+            : obstructedHexRayMap{},
+              optPseudoLegalMoves{},
+              optLegalMoves{},
+              optCheckEnum{},
+              optOutcome{}
+        { }
+
+        void clear() {
+            obstructedHexRayMap.clear();
+            optPseudoLegalMoves = std::nullopt;
+            optLegalMoves = std::nullopt;
+            optCheckEnum = std::nullopt;
+            optOutcome = std::nullopt;
+        }
+
+        /// \brief Storage of slides of pieces that are blocked by opponent's pieces.
+        ///
+        /// This pseudo-legal moves that are *not* legal are those that unblock
+        /// attacks by the opponent's slider pieces. So we cache such incidents
+        /// in the form (objstructionIndex, (startIndex, dir)).
+        ///
+        /// Unlike the other values in the Board Cache, this one is not wrapped
+        /// by std::optional, because its computation is not computed in a single
+        /// function call, but rather distributed across the construction of the
+        /// HexRays of the sliding pieces.
+        ObstructedHexRayMap obstructedHexRayMap{};
+
+        OptMoves       optPseudoLegalMoves{};
+        OptMoves       optLegalMoves{};
+        OptCheckEnum   optCheckEnum{};
+        OptGameOutcome optOutcome{};
+    };
+    mutable Cache _cache{};
 };
 
 } // namespace hexchess::core
