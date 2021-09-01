@@ -131,7 +131,7 @@ Fen<Glinski>::Fen(const string& s) {
     // [2]: CastlingBits // \todo Add support for castling
     optEpIndex = fenParts[3] == "-"
                      ? std::nullopt
-                     : std::make_optional(V::nameToIndex(fenParts[3]));
+                     : std::make_optional(V::cellNameToIndex(fenParts[3]));
     currentCounter = std::stoi(fenParts[4]);
     // Note: Full move counter == (currentCounter + 1) / 2
 }
