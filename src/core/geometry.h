@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include <vector>
 
 #include "util.h"
@@ -28,7 +30,7 @@ using HexDirs = std::vector<HexDir>;
 
 /// \brief A vector in hexagonal coordinates.
 struct HexDir {
-    HexDir(HexCoord h0, HexCoord h1) : hex0{h0}, hex1{h1} {}
+    HexDir(HexCoord h0, HexCoord h1);
     HexDir(const HexDir& other) = default;
     ~HexDir() {};
     HexDir& operator=(const HexDir& other) = delete;
@@ -36,8 +38,14 @@ struct HexDir {
     HexCoord hex0;
     HexCoord hex1;
 };
+/// \brief Addition of two HexDir objects.
+HexDir& operator+=(HexDir& dir, const HexDir& other);
+HexDir operator+(const HexDir& d1, const HexDir& d2);
+
+std::ostream& operator<<(std::ostream& os, const HexDir& d);
 
 using HexDirs = std::vector<HexDir>;
+
 
 struct BoardDir {
     // Orthogonal directions
@@ -63,6 +71,7 @@ struct BoardDir {
     static const HexDirs knightLeapDirs;  // \brief The 12 directions that a Knight can leap in hexagonal coordinates
 };
 
+
 /// \brief A point in hexagonal coordinates.
 ///
 /// (The origin and directions of hex coordinates vary by Variant.
@@ -71,7 +80,7 @@ struct BoardDir {
 ///     and axis hex1 is incremented toward the N.)
 struct HexPos {
     HexPos(HexCoord h0, HexCoord h1) : hex0{h0}, hex1{h1} {}
-    HexPos(const HexPos& other) = delete;
+    HexPos(const HexPos& other) = default;
     ~HexPos() {};
     HexPos& operator=(const HexPos& other) = delete;
 
@@ -79,16 +88,15 @@ struct HexPos {
     HexCoord hex1;
 };
 
+/// \brief Subtraction of two HexPos yields a HexDir.
+HexDir operator-(const HexPos& p1, const HexPos& p2);
+
 /// \brief Addition of HexDir \p d to HexPos \p pos.
 HexPos& operator+=(HexPos& pos, const HexDir& d);
-
-/// \brief Addition of two HexDir objects.
-HexDir& operator+=(HexDir& dir, const HexDir& other);
 
 /// \brief Addition of HexDir \p d to HexPos \p pos.
 HexPos operator+(const HexPos& pos, const HexDir& d);
 
-/// \brief Addition of two HexDir objects.
-HexDir operator+(const HexDir& d1, const HexDir& d2);
+std::ostream& operator<<(std::ostream& os, const HexPos& d);
 
 }  // namespace hexchess::core
