@@ -32,14 +32,15 @@ using std::vector;
 namespace hexchess::core {
 
 template<>
-HexRay<Glinski>::HexRay(Index start, const HexDir& dir) {
+HexRay<Glinski>::HexRay(Index start, const HexDir& dir)
+    : _start{start}, _dir{dir}, _indices{}
+{
     for (HexPos cursor = V::indexToPos(start) + dir;
              V::isOnBoard(cursor);
              cursor += dir)
     {
         Index curIndex = V::posToIndex(cursor);
-        bits.set(curIndex);
-        indices.push_back(curIndex);
+        _indices.push_back(curIndex);
     }
 }
 
@@ -82,12 +83,14 @@ HexCoord Glinski::hex1(Index index)
 }
 
 bool Glinski::isOnBoard(HexCoord hex0, HexCoord hex1) {
-    return hex0 >= 0          // W
+    bool result =
+           hex0 >= 0          // W
         && hex0 <= 10         // E
         && hex1 >= 0          // SW
         && hex1 <= 10         // NE
         && hex1 - hex0 <= 5   // NW
         && hex0 - hex1 <= 5;  // SE
+    return result;
 }
 
 const Strings Glinski::cellNames {
@@ -108,7 +111,7 @@ const string& Glinski::cellName(Index index) {
     return cellNames.at(index);
 }
 
-Index Glinski::nameToIndex(const string& name) {
+Index Glinski::cellNameToIndex(const string& name) {
     static const map<string, Index> n2i { []()
         {
             map<string, Index> result;
@@ -157,7 +160,7 @@ const Short Glinski::fenRowLengths[Glinski::ROW_COUNT] {
 // ========================================
 // Initialization of private data
 
-map<pair<HexCoord, HexCoord>, Index> Glinski::_hexToIndex = []() {
+const map<pair<HexCoord, HexCoord>, Index> Glinski::_hexToIndex = []() {
     map<pair<HexCoord, HexCoord>, Index> result{};
 
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
@@ -168,7 +171,7 @@ map<pair<HexCoord, HexCoord>, Index> Glinski::_hexToIndex = []() {
     return result;
 }();
 
-Indices Glinski::getLeapDests(Index index, const HexDirs& dirs) {
+const Indices Glinski::getLeapDests(Index index, const HexDirs& dirs) {
     Indices result{};
 
     for (const HexDir& dir : dirs) {
@@ -181,7 +184,7 @@ Indices Glinski::getLeapDests(Index index, const HexDirs& dirs) {
     return result;
 }
 
-HexRays<Glinski> Glinski::getSlideRays(Index index, const HexDirs& dirs) {
+const HexRays<Glinski> Glinski::getSlideRays(Index index, const HexDirs& dirs) {
     HexRays<V> result{};
 
     for (const HexDir& dir : dirs) {
@@ -193,7 +196,7 @@ HexRays<Glinski> Glinski::getSlideRays(Index index, const HexDirs& dirs) {
     return result;
 }
 
-vector<Indices> Glinski::kingDests { []()
+const vector<Indices> Glinski::kingDests { []()
     {
         vector<Indices> result;
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
@@ -203,7 +206,7 @@ vector<Indices> Glinski::kingDests { []()
     }()
 };
 
-vector<HexRays<Glinski>> Glinski::queenRays { []()
+const vector<HexRays<Glinski>> Glinski::queenRays { []()
     {
         vector<HexRays<Glinski>> result;
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
@@ -218,7 +221,7 @@ vector<HexRays<Glinski>> Glinski::queenRays { []()
     }()
 };
 
-vector<HexRays<Glinski>> Glinski::rookRays { []()
+const vector<HexRays<Glinski>> Glinski::rookRays { []()
     {
         vector<HexRays<Glinski>> result;
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
@@ -228,9 +231,9 @@ vector<HexRays<Glinski>> Glinski::rookRays { []()
     }()
 };
 
-vector<HexRays<Glinski>> Glinski::bishopRays { []()
+const vector<HexRays<Glinski>> Glinski::bishopRays { []()
     {
-        vector<HexRays<Glinski>> result;
+        vector<HexRays<Glinski>> result{};
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
             result.push_back(getSlideRays(index, Glinski::bishopSlideDirs));
         }
@@ -238,9 +241,9 @@ vector<HexRays<Glinski>> Glinski::bishopRays { []()
     }()
 };
 
-vector<Indices> Glinski::knightDests { []()
+const vector<Indices> Glinski::knightDests { []()
     {
-        vector<Indices> result;
+        vector<Indices> result{};
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
             result.push_back(getLeapDests(index, Glinski::knightLeapDirs));
         }
@@ -248,17 +251,16 @@ vector<Indices> Glinski::knightDests { []()
     }()
 };
 
-map<Color, map<Index, Index>> Glinski::colorToPawnAdvance1Indices = []() {
-    map<Color, map<Index, Index>> result;
+const map<Color, map<Index, Indices>> Glinski::colorToPawnAdvance1Indices = []() {
+    map<Color, map<Index, Indices>> result{};
 
-    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
-        HexPos curPos = Glinski::indexToPos(index);
-
-        HexPos bf1 = curPos + pawnAdvanceDir(Color::Black);
-        if (isOnBoard(bf1)) { result[Color::Black][index] = Glinski::posToIndex(bf1); }
-
-        HexPos wf1 = curPos + pawnAdvanceDir(Color::White);
-        if (isOnBoard(wf1)) { result[Color::White][index] = Glinski::posToIndex(wf1); }
+    for (Color c : {Color::Black, Color::White}) {
+        result[c] = map<Index, Indices>{};
+        for (Index from = 0; from < Glinski::CELL_COUNT; ++from) {
+            HexPos curPos = Glinski::indexToPos(from);
+            HexPos fwd1 = curPos + pawnAdvanceDirs(c)[0];
+            if (isOnBoard(fwd1)) { result[c][from].push_back(Glinski::posToIndex(fwd1)); }
+        }
     }
     return result;
 }();
@@ -266,34 +268,61 @@ map<Color, map<Index, Index>> Glinski::colorToPawnAdvance1Indices = []() {
 // Only use the Pawn's home positions as initial positions.
 // Note: We do not check here to see if the space one ahead of the Pawn is blocked.
 //     That is taken care of by the user of this data.
-map<Color, map<Index, Index>> Glinski::colorToPawnAdvance2Indices = []() {
-    map<Color, map<Index, Index>> result;
+const map<Color, map<Index, Indices>> Glinski::colorToPawnAdvance2Indices = []() {
+    map<Color, map<Index, Indices>> result{};
 
-    for (Index index : _bp_indices) {
-        HexPos curPos = Glinski::indexToPos(index);
-
-        HexDir bfd = pawnAdvanceDir(Color::Black);
-        HexPos bf2 = curPos + bfd + bfd;
-        if (isOnBoard(bf2)) { result[Color::Black][index] = Glinski::posToIndex(bf2); }
+    for (Color c : {Color::Black, Color::White}) {
+        for (Index from : (c == Color::Black ? _bp_indices : _wp_indices)) {
+            HexPos curPos = Glinski::indexToPos(from);
+            for (const HexDir& fdir : V::pawnAdvanceDirs(c)) {
+                HexPos fwd2 = curPos + fdir + fdir;
+                if (V::isOnBoard(fwd2)) {
+                    result[c][from].push_back(Glinski::posToIndex(fwd2));
+                }
+            }
+        }
     }
+    return result;
+}();
 
-    for (Index index : _wp_indices) {
-        HexPos curPos = Glinski::indexToPos(index);
+const map<Color, map<Index, Indices>> Glinski::colorToPawnCaptureIndices = []() {
+    map<Color, map<Index, Indices>> result{};
 
-        HexDir wfd = pawnAdvanceDir(Color::White);
-        HexPos wf2 = curPos + wfd + wfd;
-        if (isOnBoard(wf2)) { result[Color::White][index] = Glinski::posToIndex(wf2); }
+    for (Color c : {Color::Black, Color::White}) {
+        result[c] = map<Index, Indices>{};
+        for (Index from = 0; from < Glinski::CELL_COUNT; ++from) {
+            result[c][from] = Indices{};
+            for (HexDir dir : V::pawnCaptureDirs(c)) {
+                HexPos destPos = indexToPos(from) + dir;
+                if (V::isOnBoard(destPos)) {
+                    result[c][from].push_back(posToIndex(destPos));
+                }
+            }
+        }
     }
     return result;
 }();
 
 /// \todo Implement Glinski::colorToPawnCaptureBits
-map<Color, Glinski::Bits> Glinski::colorToPawnCaptureBits = []() {
-    map<Color, Glinski::Bits> result;
+const map<Color, map<Index, Glinski::Bits>> Glinski::colorToPawnCaptureBits = []() {
+    map<Color, map<Index, Glinski::Bits>> result{};
+
+    for (Color c : {Color::Black, Color::White}) {
+        result[c] = map<Index, Glinski::Bits>{};
+        for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+            result[c][index] = Glinski::Bits{};
+            for (HexDir dir : V::pawnCaptureDirs(c)) {
+                HexPos destPos = V::indexToPos(index) + dir;
+                if (V::isOnBoard(destPos)) {
+                    result[c][index].set(posToIndex(destPos));
+                }
+            }
+        }
+    }
     return result;
 }();
 
-map<Color, typename Glinski::Bits> Glinski::colorToPawnPromotionBits = []() {
+const map<Color, typename Glinski::Bits> Glinski::colorToPawnPromotionBits = []() {
     map<Color, typename Glinski::Bits> result{};
 
     result[Color::Black] = Glinski::Bits();
@@ -310,7 +339,7 @@ map<Color, typename Glinski::Bits> Glinski::colorToPawnPromotionBits = []() {
     return result;
 }();
 
-map<Color, typename Glinski::Bits> Glinski::colorToPawnStartBits = []() {
+const map<Color, typename Glinski::Bits> Glinski::colorToPawnStartBits = []() {
     map<Color, Glinski::Bits> result{};
     result[Color::Black] = Glinski::Bits();
     result[Color::White] = Glinski::Bits();
@@ -323,17 +352,21 @@ map<Color, typename Glinski::Bits> Glinski::colorToPawnStartBits = []() {
     return result;
 }();
 
-const HexDir& Glinski::pawnAdvanceDir(Color c) {
-    static const HexDir bForward{0, -1};
-    static const HexDir wForward{0, 1};
-    return c == Color::Black ? bForward : wForward;
+const HexDirs& Glinski::pawnAdvanceDirs(Color c) {
+    static const HexDirs bForwards{ HexDir{0, -1} };
+    static const HexDirs wForwards{ HexDir{0,  1} };
+    return c == Color::Black ? bForwards : wForwards;
 }
 
 const HexDirs& Glinski::pawnCaptureDirs(Color c) {
-    static const HexDirs bForwards { HexDir(-1, -1), HexDir( 1, 0) };
-    static const HexDirs wForwards { HexDir(-1,  0), HexDir( 1, 1) };
+    static const HexDirs bForwards{ HexDir(-1, -1), HexDir( 1, 0) };
+    static const HexDirs wForwards{ HexDir(-1,  0), HexDir( 1, 1) };
     return c == Color::Black ? bForwards : wForwards;
 }
+
+const PieceTypes Glinski::promotionPieceTypes {
+    PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight
+};
 
 // ========================================
 // Castling

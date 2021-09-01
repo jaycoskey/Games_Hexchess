@@ -14,6 +14,7 @@
 #pragma once
 
 #include <map>
+#include <utility>
 #include <vector>
 
 #include "geometry.h"
@@ -29,8 +30,8 @@ using OptColorPieceType = std::optional<ColorPieceType>;
 using PiecesDense = std::vector<std::tuple<Index, Color, PieceType>>;
 using PiecesSparse = std::vector<OptColorPieceType>;
 
-/// \brief A (possibly empty) ordered sequence of Indexes in given direction from
-///        a reference cell. The sequence does not include the reference cell.
+/// \brief A (possibly empty) ordered sequence of Indices in given direction from
+///        a starting cell. The sequence does not include the starting cell.
 ///
 /// This is used to represent the possible destinations of a slider piece.
 /// For example, a Queen at the center of the board can move in 12 directions,
@@ -38,26 +39,45 @@ using PiecesSparse = std::vector<OptColorPieceType>;
 /// with empty HexRays.
 ///
 /// \todo Implement support for Castling when adding McCooey or Shafran variants.
+/// \todo There might be a performance gain from using a bitset to test for a capturing
+///       opportunity before testing individual moves.
 template <typename Variant>
-struct HexRay {
+class HexRay {
+public:
     typedef Variant V;
 
     HexRay(Index start, const HexDir& dir);
-    ~HexRay() {};
+    // ~HexRay() {};
 
-    bool size() const { return indices.size(); }
+    bool size() const { return _indices.size(); }
+    bool isEmpty() const { return _indices.empty(); }
 
-    /// Returns true if there are no indices this HexRay.
-    bool isEmpty() const { return indices.empty(); }
+    Index start() const { return _start; }
+    HexDir dir() const { return _dir; }
+    const Indices indices() const { return _indices; };
 
-    typename V::Bits bits;     // For initial batch testing
-    Indices indices;  // For iterating after batch test found obstruction
+private:
+    Index _start;  // For iterating after batch test found obstruction
+    HexDir _dir;  // For iterating after batch test found obstruction
+    Indices _indices;  // For iterating after batch test found obstruction
+
 };
 
 /// \brief A collection of HexRays, which can be used to represent possible
 ///        destinations of a slider piece from a specified start Cell.
 template<typename Variant>
 using HexRays = std::vector<HexRay<Variant>>;
+
+/// \brief The defining info characterizing a HexRay: starting cell and direction.
+using HexRayCore = std::pair<Index, HexDir>;
+using HexRayCores = std::vector<std::pair<Index, HexDir>>;
+
+/// \brief The ObstructedHexRayMap is a map from cells that block sliding chess pieces
+///        to the HexRayCore (starting cell and direction) of the blocked slides.
+///
+/// This is used to determinng which pseudo-legal moves are legal.
+/// Specifically, whether a player moving a piece results in auto-check.
+using ObstructedHexRayMap = std::map<Index, HexRayCores>;
 
 /// \brief All the variant-specific information regarding board, pieces,
 ///        and other rules of play.
@@ -98,8 +118,8 @@ public:
 
     /// \brief Convert between representaions of a Cell.
     static HexPos indexToPos(Index index) { return HexPos(hex0(index), hex1(index)); }
-    /// \brief Convert between representaions of a Cell.
-    static Index hexToIndex(HexCoord hex0, HexCoord hex1) { return _hexToIndex[mkPair(hex0, hex1)]; }
+    /// \brief Convert between representaions of a Cell
+    static Index hexToIndex(HexCoord hex0, HexCoord hex1) { return _hexToIndex.at(mkPair(hex0, hex1)); }
     /// \brief Convert between representaions of a Cell.
     static Index posToIndex(const HexPos& pos) { return hexToIndex(pos.hex0, pos.hex1); }
 
@@ -111,7 +131,7 @@ public:
     /// \brief The standard names (e.g., A0, L6, etc.) of the Cells
     static const Strings cellNames;
     static const std::string& cellName(Index index);
-    static Index nameToIndex(const std::string& name);
+    static Index cellNameToIndex(const std::string& name);
 
     // ========================================
     // Cell shading
@@ -129,66 +149,72 @@ public:
     static const inline HexDirs& bishopSlideDirs = BoardDir::diagDirs;
     static const inline HexDirs& knightLeapDirs  = BoardDir::knightLeapDirs;
 
-    static const HexDir& pawnAdvanceDir(Color c);
+    static const HexDirs& pawnAdvanceDirs(Color c);
     static const HexDirs& pawnCaptureDirs(Color c);
 
     // ========================================
     // Board locations
 
-    static const V::Bits& pawnPromotionBits(Color c) { return colorToPawnPromotionBits[c]; }
-    static const V::Bits& pawnStartBits(Color c) { return colorToPawnStartBits[c]; }
+    static const Bits& pawnPromotionBits(Color c) { return colorToPawnPromotionBits.at(c); }
+    static const PieceTypes promotionPieceTypes;
+    static const Bits& pawnStartBits(Color c) { return colorToPawnStartBits.at(c); }
 
-    // static constexpr int bk_indices[1] = {86};
-    // static constexpr int bq_indices[1] = {78};
-    // static constexpr int br_indices[2] = {61, 88};
-    // static constexpr int bb_indices[3] = {72, 79, 85};
-    // static constexpr int bn_indices[2] = {70, 87};
-    // static constexpr int bp_indices[9] = {51, 52, 53, 54, 55, 65, 74, 82, 89};
+    // static constexpr Index bk_indices[1] = {86};
+    // static constexpr Index bq_indices[1] = {78};
+    // static constexpr Index br_indices[2] = {61, 88};
+    // static constexpr Index bb_indices[3] = {72, 79, 85};
+    // static constexpr Index bn_indices[2] = {70, 87};
+    // static constexpr Index bp_indices[9] = {51, 52, 53, 54, 55, 65, 74, 82, 89};
 
-    // static constexpr int wk_indices[1] = {12};
-    // static constexpr int wq_indices[1] = {4};
-    // static constexpr int wr_indices[2] = {2, 29};
-    // static constexpr int wb_indices[3] = {5, 11, 18};
-    // static constexpr int wn_indices[2] = {3, 20};
-    // static constexpr int wp_indices[9] = {1, 8, 16, 25, 35, 36, 37, 38, 39};
+    // static constexpr Index wk_indices[1] = {12};
+    // static constexpr Index wq_indices[1] = {4};
+    // static constexpr Index wr_indices[2] = {2, 29};
+    // static constexpr Index wb_indices[3] = {5, 11, 18};
+    // static constexpr Index wn_indices[2] = {3, 20};
+    // static constexpr Index wp_indices[9] = {1, 8, 16, 25, 35, 36, 37, 38, 39};
 
     // ========================================
     // Piece movement lookup
 
     /// \todo Change method signature to flat-side variants w/ 2 advance dirs (e.g., Brusky, De Vasa)
-    static const std::map<Index, Index> pawnAdvance1Indices(Color c) { return colorToPawnAdvance1Indices[c]; }
+    static const Indices pawnAdvance1Indices(Index from, Color c) { return colorToPawnAdvance1Indices.at(c).at(from); }
 
     /// \todo Change method signature to flat-side variants w/ 2 advance dirs (e.g., Brusky, De Vasa)
-    static const std::map<Index, Index> pawnAdvance2Indices(Color c) { return colorToPawnAdvance2Indices[c]; }
+    static const Indices pawnAdvance2Indices(Index from, Color c) { return colorToPawnAdvance2Indices.at(c).at(from); }
 
-    static const V::Bits pawnCaptureBits(Color c) { return colorToPawnCaptureBits[c]; }
+    static const Indices pawnCaptureIndices(Index from, Color c) { return colorToPawnCaptureIndices.at(c).at(from); }
+
+    static const Bits pawnCaptureBits(Index from, Color c) { return colorToPawnCaptureBits.at(c).at(from); }
 
     ///< \brief Represents all Cells a King can leap to, indexed by initial position.
     ///         This does not include Castling, which is handled separately.
-    static std::vector<Indices>    kingDests;
+    static const std::vector<Indices>    kingDests;
 
-    static std::vector<HexRays<V>> queenRays;    ///< \brief Represents all Cells that a Queen can slide to.
-    static std::vector<HexRays<V>> rookRays;     ///< \brief Represents all Cells that a Rook can slide to.
-    static std::vector<HexRays<V>> bishopRays;   ///< \brief Represents all Cells that a Bishop can slide to.
-    static std::vector<Indices>    knightDests;  ///< \brief Represents all Cells that a Knight can leap to.
+    static const std::vector<HexRays<V>> queenRays;    ///< \brief Represents all Cells that a Queen can slide to.
+    static const std::vector<HexRays<V>> rookRays;     ///< \brief Represents all Cells that a Rook can slide to.
+    static const std::vector<HexRays<V>> bishopRays;   ///< \brief Represents all Cells that a Bishop can slide to.
+    static const std::vector<Indices>    knightDests;  ///< \brief Represents all Cells that a Knight can leap to.
 
     /// \brief Represents start and destination Cells for single-step Pawn moves.
-    static std::map<Color, std::map<Index, Index>> colorToPawnAdvance1Indices;
+    static const std::map<Color, std::map<Index, Indices>> colorToPawnAdvance1Indices;
 
     /// \brief Represents start and destination Cells for double-step Pawn moves.
-    static std::map<Color, std::map<Index, Index>> colorToPawnAdvance2Indices;
+    static const std::map<Color, std::map<Index, Indices>> colorToPawnAdvance2Indices;
 
     /// \brief Represents start and destination Cells for Pawn capture moves.
-    static std::map<Color, typename V::Bits> colorToPawnCaptureBits;
+    static const std::map<Color, std::map<Index, Indices>> colorToPawnCaptureIndices;
+
+    /// \brief Represents start and destination Cells for Pawn capture moves.
+    static const std::map<Color, std::map<Index, Bits>> colorToPawnCaptureBits;
 
     /// \brief Static map (per Color) of which Cells lead to Pawn promotion.
-    static std::map<Color, typename V::Bits> colorToPawnPromotionBits;
+    static const std::map<Color, Bits> colorToPawnPromotionBits;
 
     /// \brief Static map (per Color) of which Cells are Pawn start locations.
     ///
     /// For each Pawn on its initial locations, colorToPawnAdvance2Indices
     /// can be used to look up destination cells.
-    static std::map<Color, typename V::Bits> colorToPawnStartBits;
+    static const std::map<Color, Bits> colorToPawnStartBits;
 
     // ========================================
     // Castling
@@ -198,7 +224,7 @@ public:
 private:
     // ========== Board geometry
     /// \brief Lookup map to convert from hex coordinates to Index
-    static std::map<std::pair<HexCoord, HexCoord>, Index> _hexToIndex;
+    static const std::map<std::pair<HexCoord, HexCoord>, Index> _hexToIndex;
 
     // ========== Board shading
     /// \brief Array of CellShades, used to determine the shade of a cell from hex coordinates.
@@ -212,10 +238,10 @@ private:
 
     // ========== Piece movement caching support methods
     /// \brief Cached info for determining pseudo-legal moves for "leaper" pieces: King, Knight.
-    static Indices getLeapDests(Index index, const HexDirs& dirs);
+    static const Indices getLeapDests(Index index, const HexDirs& dirs);
 
     /// \brief Cached info for determining pseudo-legal moves for "slider" pieces: Queen, Rook, Bishop.
-    static HexRays<V> getSlideRays(Index index, const HexDirs& dirs);
+    static const HexRays<V> getSlideRays(Index index, const HexDirs& dirs);
 
     // static std::map<Color, std::map<CastlingEnum, Castling>> _castlings;
 };
