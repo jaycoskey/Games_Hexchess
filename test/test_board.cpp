@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "board.h"
 #include "geometry.h"
 #include "util.h"
@@ -45,13 +47,13 @@ using hexchess::core::Short;
 
 
 /// \brief Test: For each Player, the Bishop starting positions have three different cell shades.
-void test_board_bishopShades() {
+TEST(BoardTest, BoardBishopShades) {
     Board<Glinski> b{};
 
     for (Color c : {Color::Black, Color::White}) {
         vector<Index> bishopCellIndices{};
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
-            if (b.isBishopAtIndex(index, c)) {
+            if (b.isBishopAt(index, c)) {
                 bishopCellIndices.push_back(index);
             }
         }
@@ -82,7 +84,9 @@ void test_board_bishopShades() {
 /// \brief Test: The FEN of a newly constructed board matches the (standard) initial FEN.
 ///
 /// For more information on Forsyth-Edwards Notation (FEN), see Wikipedia.
-void test_board_fen(bool verbose=false) {
+TEST(BoardTest, BoardFen) {
+    bool verbose=false;
+
     Board<Glinski> b{};
     if (verbose) {
         cout << "========================================\n";
@@ -99,7 +103,7 @@ void test_board_fen(bool verbose=false) {
 }
 
 /// \brief Test: All of a Knight's moves land on a cell differently shaded than the starting cell.
-void test_board_knightMoves() {
+TEST(BoardTest, BoardKnightMoves) {
     Index centerIndex = 45;
     HexPos centerPos = Glinski::indexToPos(centerIndex);
     CellShade centerShade = Glinski::cellShade(centerPos);
@@ -125,7 +129,9 @@ void test_board_knightMoves() {
 }
 
 /// \brief Test: The piece counts for a starting position match the expected values.
-void test_board_pieceCount(bool verbose=false) {
+TEST(BoardTest, BoardPieceCount) {
+    bool verbose=false;
+
     Board<Glinski> b{};
 
     for (Color c : {Color::Black, Color::White}) {
@@ -151,7 +157,7 @@ void test_board_pieceCount(bool verbose=false) {
 }
 
 /// \brief Calls to addPiece and removePiece work as expected.
-void test_board_piece_placement() {
+TEST(BoardTest, BoardPiecePlacement) {
     Board<Glinski> b{};
     Index centerIndex = 45;
     assert(b.isEmpty(centerIndex));
@@ -165,12 +171,3 @@ void test_board_piece_placement() {
 
     assert(b.zobristHash() == 0x712bf5ea63571cf5);
 };
-
-
-int main(int argc, char *argv[]) {
-    test_board_pieceCount();
-    test_board_bishopShades();
-    test_board_fen();
-    test_board_knightMoves();
-    test_board_piece_placement();
-}

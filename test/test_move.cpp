@@ -15,6 +15,8 @@
 
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 #include "board.h"
 #include "move.h"
 #include "util_hexchess.h"
@@ -34,6 +36,7 @@ using hexchess::core::Indices;
 using hexchess::core::Move;
 using hexchess::core::Moves;
 using hexchess::core::Short;
+using hexchess::core::Size;
 
 
 /// \brief Test: Find the move count of Leaper over all starting points.
@@ -61,7 +64,9 @@ Short move_count_slider(const vector<HexRays<Glinski>>& slideRayTable, bool verb
 }
 
 /// \brief Test: Test the count of all King moves over all starting points.
-void test_move_count_king(bool verbose=false) {
+TEST(MoveTest, MoveCountKing) {
+    bool verbose = false;
+
     Short move_count = move_count_leaper(Glinski::kingDests, verbose);
 
     if (verbose) {
@@ -71,7 +76,9 @@ void test_move_count_king(bool verbose=false) {
 }
 
 /// \brief Test: Test the count of all Queen moves over all starting points.
-void test_move_count_queen(bool verbose=false) {
+TEST(MoveTest, MoveCountQueen) {
+    bool verbose = false;
+
     Short move_count = move_count_slider(Glinski::queenRays, verbose);
 
     if (verbose) {
@@ -81,7 +88,9 @@ void test_move_count_queen(bool verbose=false) {
 }
 
 /// \brief Test: Test the count of all Rook moves over all starting points.
-void test_move_count_rook(bool verbose=false) {
+TEST(MoveTest, MoveCountRook) {
+    bool verbose = false;
+
     Short move_count = move_count_slider(Glinski::rookRays, verbose);
 
     if (verbose) {
@@ -91,7 +100,9 @@ void test_move_count_rook(bool verbose=false) {
 }
 
 /// \brief Test: Test the count of all Bishop moves over all starting points.
-void test_move_count_bishop(bool verbose=false) {
+TEST(MoveTest, MoveCountBishop) {
+    bool verbose = false;
+
     Short move_count = move_count_slider(Glinski::bishopRays, verbose);
 
     if (verbose) {
@@ -101,7 +112,9 @@ void test_move_count_bishop(bool verbose=false) {
 }
 
 /// \brief Test: Test the count of all Knight moves over all starting points.
-void test_move_count_knight(bool verbose=false) {
+TEST(MoveTest, MoveCountKnight) {
+    bool verbose = false;
+
     Short move_count = 0;
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
         move_count += Glinski::knightDests[index].size();
@@ -110,7 +123,9 @@ void test_move_count_knight(bool verbose=false) {
 }
 
 /// \brief Test: Test the count of all legal starting moves.
-void test_move_count_board(bool verbose=false) {
+TEST(MoveTest, MoveCountBoard) {
+    bool verbose = false;
+
     Board<Glinski> b{};  // Initial game layout
     Moves bMoves = b.getLegalMoves(Color::Black);
     Moves wMoves = b.getLegalMoves(Color::White);
@@ -119,26 +134,23 @@ void test_move_count_board(bool verbose=false) {
         cout << "Black moves from initial board layout: " << bMoves.size() << "\n";
         cout << "White moves from initial board layout: " << wMoves.size() << "\n";
     }
-    Short kCount = 2;
-    Short qCount = 6;
-    Short rCount = 6;
-    Short bCount = 12;
-    Short nCount = 8;
-    Short pCount = 17;
-    Short expectedCount = kCount + qCount + rCount + bCount + nCount + pCount;
+    Size kCount = 2;
+    Size qCount = 6;
+    Size rCount = 6;
+    Size bCount = 12;
+    Size nCount = 8;
+    Size pCount = 17;
+    Size expectedCount = kCount + qCount + rCount + bCount + nCount + pCount;
     assert(expectedCount == 51);
 
-    assert(bMoves.size() == expectedCount);
-    assert(wMoves.size() == expectedCount);
-}
-
-
-int main(int argc, char *argv[]) {
-    test_move_count_king(true);
-    test_move_count_queen(true);
-    test_move_count_rook(true);
-    test_move_count_bishop(true);
-    test_move_count_knight(true);
-
-    test_move_count_board(true);
+    if (bMoves.size() != expectedCount) {
+        cout << "test_move_count_board: bMoves: "
+             << bMoves.size() << " != " << expectedCount << "\n";
+        assert(false);
+    }
+    if (wMoves.size() != expectedCount) {
+        cout << "test_move_count_board: wMoves: "
+             << wMoves.size() << " != " << expectedCount << "\n";
+        assert(false);
+    }
 }

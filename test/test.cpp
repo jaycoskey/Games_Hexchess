@@ -13,31 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <cassert>
-
-#include <iostream>
-
 #include <gtest/gtest.h>
 
-#include "fen.h"
-#include "util_hexchess.h"
 
-using std::cout;
-using std::string;
-
-using hexchess::core::BoardDir;
-using hexchess::core::Fen;
-using hexchess::core::Glinski;
-
-
-TEST(FenTest, FenBasic) {
-    bool verbose = false;
-
-    string fenInitial = Glinski::fenInitial;
-    if (verbose) { cout << "FEN initial: " << fenInitial << "\n"; }
-    Fen<Glinski> fen{fenInitial};
-    assert(fen.piecesSparse.size() == Glinski::CELL_COUNT);
-    string fenStr = fen.fen_string();
-    if (verbose) { cout << "FEN derived: " << fenStr << "\n"; }
-    assert(fenStr == fenInitial);
+int main(int argc, char *argv[]) {
+    ::testing::InitGoogleTest(&argc, argv);
+    auto result = RUN_ALL_TESTS();
+    return result;
 }

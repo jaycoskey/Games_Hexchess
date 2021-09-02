@@ -15,9 +15,12 @@
 
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 #include "board.h"
 #include "move.h"
 #include "player.h"
+#include "player_simple_advancing.h"
 #include "variant.h"
 
 using std::cout;
@@ -26,19 +29,20 @@ using hexchess::core::Board;
 using hexchess::core::Glinski;
 using hexchess::core::Move;
 using hexchess::core::PieceType;
-using hexchess::core::RandomAdvancingPlayer;
 
+using hexchess::player::PlayerAction;
+using hexchess::player::PlayerAdvancing;
 
 /// As of 2021-08-19, fails with NotImplementedException (Board<V>::getLegalMoves(Color)
-void test_player_advancing(bool verbose=false) {
-    RandomAdvancingPlayer player{};
-    const Move& nextMove = player.getNextMove(Glinski::fenInitial);
+#ifdef NOTYET
+// TODO: Modify Player*'s signal/slot methods to be more testable
+TEST(PlayerTest, PlayerAdvancing) {
+    bool verbose = false;
+
+    PlayerAdvancing player{};
+    PlayerAction nextAction = player.getNextAction(Glinski::fenInitial);
 
     // Bishops can advance furthest on first move
-    assert(nextMove.pieceType() == PieceType::Bishop);
+    assert(nextAction.getMove().pieceType() == PieceType::Bishop);
 }
-
-
-int main(int argc, char *argv[]) {
-    test_player_advancing(true);
-}
+#endif  // NOTYET

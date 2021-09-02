@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 #include "fen.h"
 #include "util_hexchess.h"
 #include "variant.h"
@@ -84,7 +86,9 @@ void _test_zobrist_color_piecetype(
 }
 
 /// \brief Test: A Black King at initial position has the expected Zobrist hash.
-void test_zobrist_initial_bk(bool verbose=false) {
+TEST(ZobristTest, ZobristInitialBk) {
+    bool verbose = false;
+
     _test_zobrist_color_piecetype(86, Color::Black, PieceType::King,
         "Black King at initial position (G10)",
         0x5dacf7eba7922c5f,
@@ -93,7 +97,9 @@ void test_zobrist_initial_bk(bool verbose=false) {
 }
 
 /// \brief Test: A White Queen at initial position has the expected Zobrist hash.
-void test_zobrist_initial_wq(bool verbose=false) {
+TEST(ZobristTest, ZobristInitialWq) {
+    bool verbose = false;
+
     _test_zobrist_color_piecetype(4, Color::White, PieceType::Queen,
         "White King at initial position (E0)",
         0x66ea8004a7e610e5,
@@ -102,7 +108,9 @@ void test_zobrist_initial_wq(bool verbose=false) {
 }
 
 /// \brief Test: A Board with initial layout has the expected Zobrist hash.
-void test_zobrist_initial_board(bool verbose=false) {
+TEST(ZobristTest, ZobristInitialBoard) {
+    bool verbose = false;
+
     ZHash boardHash = 0;
 
     PiecesSparse pieces = Fen<Glinski>::fen_board_parse(Glinski::fenInitial, verbose);
@@ -124,10 +132,4 @@ void test_zobrist_initial_board(bool verbose=false) {
         cout << "\n";
     }
     assert(boardHash == 0x712bf5ea63571cf5);
-}
-
-int main(int argc, char *argv[]) {
-    test_zobrist_initial_bk();
-    test_zobrist_initial_wq();
-    test_zobrist_initial_board();
 }

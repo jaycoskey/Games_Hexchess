@@ -18,6 +18,8 @@
 
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 #include "geometry.h"
 #include "util.h"
 #include "util_hexchess.h"
@@ -33,6 +35,7 @@ using hexchess::core::HexPos;
 using hexchess::core::Index;
 
 
+// Note: Currently not invoked
 void print_cell_names() {
     cout << "Cell names: ";
     for (Index i = 0; i < Glinski::CELL_COUNT; ++i) {
@@ -41,6 +44,7 @@ void print_cell_names() {
     cout << "\n";
 }
 
+// Note: Currently not invoked
 void print_indexToHex0() {
     cout << "Index to hex0: ";
     for (Index i = 0; i < Glinski::CELL_COUNT; ++i) {
@@ -49,6 +53,7 @@ void print_indexToHex0() {
     cout << "\n";
 }
 
+// Note: Currently not invoked
 void print_indexToHex1() {
     cout << "Index to hex0: ";
     for (Index k = 0; k < Glinski::CELL_COUNT; ++k) {
@@ -58,7 +63,9 @@ void print_indexToHex1() {
 }
 
 /// \brief Test: Hex coordinate functions and addition of HexPos + HexDir work as expected.
-void test_position_direction(bool verbose=false) {
+TEST(GeometryTest, GeometryPositiveDirection) {
+    bool verbose=false;
+
     typedef Glinski V;
 
     const Index CENTER_INDEX = 45;
@@ -78,36 +85,4 @@ void test_position_direction(bool verbose=false) {
     assert(knightDest.hex0 == 6);
     assert(knightDest.hex1 == 7);
     assert(V::posToIndex(knightDest) == 65);
-}
-
-/// \brief Test: Test the count of all Queen moves over all starting points.
-void test_move_count_king(bool verbose) {
-    throw NotImplementedException{"test_geometry.cpp: test_move_count_king"};
-}
-
-/// \brief Test: Test the count of all Queen moves over all starting points.
-void test_move_count_queen(bool verbose) {
-    throw NotImplementedException{"test_geometry.cpp: test_move_count_queen"};
-}
-
-/// \brief Test: Test the count of all Rook moves over all starting points.
-void test_move_count_rook(bool verbose) {
-    throw NotImplementedException{"test_geometry.cpp: test_move_count_rook"};
-}
-
-/// \brief Test: Test the count of all Rook moves over all starting points.
-void test_move_count_bishop(bool verbose) {
-    throw NotImplementedException{"test_geometry.cpp: test_move_count_bishop"};
-}
-
-/// \brief Test: Test the count of all Knight moves over all starting points.
-void test_move_count_knight(bool verbose) {
-    throw NotImplementedException{"test_geometry.cpp: test_move_count_knight"};
-}
-
-int main(int argc, char *argv[]) {
-    test_position_direction();
-    // print_cell_names();
-    // print_indexToHex0();
-    // print_indexToHex1();
 }

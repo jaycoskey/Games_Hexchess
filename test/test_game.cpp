@@ -18,10 +18,13 @@
 #include <iostream>
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "board.h"
 #include "game.h"
 #include "game_outcome.h"
 #include "player.h"
+#include "player_simple_random.h"
 #include "util.h"
 #include "util_hexchess.h"
 
@@ -32,26 +35,27 @@ using hexchess::core::Board;
 using hexchess::core::Color;
 using hexchess::core::Game;
 using hexchess::core::GameOutcome;
-using hexchess::core::Glinski;
-using hexchess::core::Player;
-using hexchess::core::RandomPlayer;
+
+using hexchess::player::Player;
+using hexchess::player::PlayerRandom;
 
 
 /// As of 2021-08-19, fails with NotImplementedException (Game::play())
-void test_game(bool verbose=false) {
-    std::shared_ptr<Player> bPlayer = std::make_shared<RandomPlayer>();
-    std::shared_ptr<Player> wPlayer = std::make_shared<RandomPlayer>();
+TEST(GameTest, GameBasic) {
+    bool verbose=false;
 
-    Game<Glinski> g{wPlayer, bPlayer};
-    const GameOutcome& outcome = g.play();
-    assert(outcome == g.outcome);
-    cout << "Game ended after " << g.board.currentCounter() << " moves.\n";
-    cout << g.game_summary_string() << "\n";
-    cout << g.pgn_string() << "\n";
-    cout << g.game_summary_string() << "\n";
-}
+    std::shared_ptr<Player> player1 = std::make_shared<PlayerRandom>();
+    std::shared_ptr<Player> player2 = std::make_shared<PlayerRandom>();
 
+    Game g{false};
+    g.setPlayer1(player1);
+    g.setPlayer2(player2);
 
-int main(int argc, char *argv[]) {
-    test_game(true);
+    // TODO: Re-implement to interact with slot/signal design of Player classes.
+    // const GameOutcome& outcome = g.play();
+    // assert(outcome == g.outcome);
+    // cout << "Game ended after " << g.board.currentCounter() << " moves.\n";
+    // cout << g.game_summary_string() << "\n";
+    // cout << g.pgn_string() << "\n";
+    // cout << g.game_summary_string() << "\n";
 }
