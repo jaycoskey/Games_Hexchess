@@ -23,11 +23,14 @@
 #include "player.h"
 #include "player_human_text.h"
 #include "player_simple_random.h"
+#include "version.h"
 
 #include "ui/boardwidget.h"
 #include "ui/mainwindow.h"
 
 using std::cout;
+
+using hexchess::version_string;
 
 using hexchess::core::Color;
 using hexchess::core::Game;
@@ -39,14 +42,14 @@ using hexchess::player::PlayerRandom;
 
 /// \todo Modify to support multiple variants
 int main(int argc, char *argv[]) {
-    cout << "Entering main\n";
-
     QApplication a(argc, argv);
 
     Game game{false};
     MainWindow mw{};
 
-    if (argc == 2 && strcmp(argv[1], "--text") == 0) {
+    if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        cout << "Version: " << version_string() << "\n";
+    } else if (argc == 2 && strcmp(argv[1], "--text") == 0) {
         std::shared_ptr<Player> player1 = std::make_shared<PlayerHumanText>();
         std::shared_ptr<Player> player2 = std::make_shared<PlayerHumanText>();
         game.setPlayer1(player1);
