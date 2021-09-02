@@ -175,28 +175,28 @@ public:
     // Piece counts
 
     /// \brief Returns the number of pieces on the board.
-    Short pieceCount()           const { return _anyPieceBits.count();           }
+    Short pieceCount()           const { return _anyPieceBits.count(); }
 
     /// \brief Returns the number of pieces on the board with Color \p c.
-    Short pieceCount(Color c)    const { return _colorToAnyPieceBits[c].count(); }
+    Short pieceCount(Color c)    const { return _colorToAnyPieceBits.at(c).count(); }
 
     /// \brief Returns the number of Kings on the board with Color \p c.
-    Short kingCount(Color c)     const { return _colorToKingBits[c].count();     }
+    Short kingCount(Color c)     const { return _colorToKingBits.at(c).count();     }
 
     /// \brief Returns the number of Queens on the board with Color \p c.
-    Short queenCount(Color c)    const { return _colorToQueenBits[c].count();    }
+    Short queenCount(Color c)    const { return _colorToQueenBits.at(c).count();    }
 
     /// \brief Returns the number of Rooks on the board with Color \p c.
-    Short rookCount(Color c)     const { return _colorToRookBits[c].count();     }
+    Short rookCount(Color c)     const { return _colorToRookBits.at(c).count();     }
 
     /// \brief Returns the number of Bishops on the board with Color \p c.
-    Short bishopCount(Color c)   const { return _colorToBishopBits[c].count();   }
+    Short bishopCount(Color c)   const { return _colorToBishopBits.at(c).count();   }
 
     /// \brief Returns the number of Knights on the board with Color \p c.
-    Short knightCount(Color c)   const { return _colorToKnightBits[c].count();   }
+    Short knightCount(Color c)   const { return _colorToKnightBits.at(c).count();   }
 
     /// \brief Returns the number of Pawns on the board with Color \p c.
-    Short pawnCount(Color c)     const { return _colorToPawnBits[c].count();     }
+    Short pawnCount(Color c)     const { return _colorToPawnBits.at(c).count();     }
 
     // ========================================
     // Other piece location methods
@@ -300,7 +300,7 @@ public:
 
     OptGameOutcome getOptOutcome() const { return _cache.optOutcome; }
     void recordOutcome(const GameOutcome& gameOutcome) const;
-    GameOutcome getOutcome() const { return _cache.optOutcome; }
+    GameOutcome getOutcome() const { return _cache.optOutcome.value(); }
 
     // ----------------------------------------
 
@@ -310,8 +310,8 @@ public:
     // Move execution
 
     void moveExec(Move& move);
-    // \todo Implement: void moveRedo(const Move& move);
-    // \todo Implement: void moveUndo(const Move& move);
+    void moveRedo(const Move& move);
+    void moveUndo(const Move& move);
 
     // ========================================
     // Reading and writing game state
@@ -342,7 +342,7 @@ public:
         if (_cache.getOutcome() == std::nullopt) {
             return false;
         }
-        Termination term = getOptOutcome().value().termination;
+        Termination term = getOptOutcome().value().termination();
         return term == Termination::Draw_3xBoardRepetition
                     || term == Termination::Draw_50MoveRule
             || term == Termination::Draw_InsufficientResources || term == Termination::Draw_Stalemate;
