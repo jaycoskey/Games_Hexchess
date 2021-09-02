@@ -73,7 +73,7 @@ public slots:
     }
 
 signals:
-    virtual void sendActionToServer(Color mover, PlayerAction& action) override;
+    void sendActionToServer(Color mover, PlayerAction& action);
 
 private:
     Board<V> _board{false};

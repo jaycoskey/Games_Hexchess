@@ -67,7 +67,7 @@ public slots:
     // TODO: Receive "superuser" board edits: addPiece, movePiece, removePiece
 
 signals:
-    virtual void sendActionToServer(Color mover, PlayerAction& action) = 0;
+    void sendActionToServer(Color mover, PlayerAction& action);
     // TODO: Send DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Send "superuser" board edits: addPiece, movePiece, removePiece
 };
