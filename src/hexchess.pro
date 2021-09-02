@@ -25,6 +25,8 @@ OBJECTS_DIR = obj
 DESTDIR = obj
 
 HEADERS += \
+    util.h version.h \
+    \
     core/board.h core/fen.h core/game.h \
     core/game_outcome.h core/geometry.h core/move.h \
     core/player_action.h core/util_hexchess.h core/variant.h \
