@@ -34,6 +34,7 @@ QT_BEGIN_NAMESPACE
 class MainWindow final : public QMainWindow
 {
     Q_OBJECT
+
 public:
     MainWindow()
     {
@@ -241,7 +242,7 @@ public:
 
     void retranslateUi()
     {
-        setWindowTitle(QApplication::translate("MainWindow", "Hexchess", nullptr));
+        setWindowTitle(QApplication::translate("MainWindow", "Hexagonal Chess", nullptr));
         actionNewGame->setText(QApplication::translate("MainWindow", "New Game", nullptr));
         actionLoadGame->setText(QApplication::translate("MainWindow", "Load Game (PGN)", nullptr));
         actionSaveGame->setText(QApplication::translate("MainWindow", "Save Game (PGN)", nullptr));
@@ -277,7 +278,7 @@ public:
 #endif // QT_NO_ACCESSIBILITY
         sideViewWidget->setTabText(sideViewWidget->indexOf(rulesTab), QApplication::translate("MainWindow", "Rules", nullptr));
         footerGroupBox->setTitle(QApplication::translate("MainWindow", "GroupBox", nullptr));
-        menuHexchess->setTitle(QApplication::translate("MainWindow", "Hexchess", nullptr));
+        menuHexchess->setTitle(QApplication::translate("MainWindow", "Hexagonal Chess", nullptr));
         menuEdit->setTitle(QApplication::translate("MainWindow", "Edit", nullptr));
         menuActions->setTitle(QApplication::translate("MainWindow", "Actions", nullptr));
         menuHelp->setTitle(QApplication::translate("MainWindow", "Help", nullptr));
