@@ -33,7 +33,7 @@ string termination_string(Termination t) {
     static map<Termination, string> t2s {
         { Termination::Win_Checkmate,     "checkmate"                   },
         { Termination::Win_Resign,        "resignation"                 },
-        { Termination::Draw_3xRepetition, "three-time board repetition" },
+        { Termination::Draw_3xBoardRepetition, "three-time board repetition" },
         { Termination::Draw_50MoveRule,   "50 moves without capature or Pawn move" },
         { Termination::Draw_InsufficientResources,
             "insufficient resources (i.e., pieces left cannot force a checkmate)" },
@@ -43,32 +43,33 @@ string termination_string(Termination t) {
 }
 
 bool GameOutcome::isDraw() const {
-    return termination == Termination::Draw_3xRepetition
-            || termination == Termination::Draw_50MoveRule
-            || termination == Termination::Draw_InsufficientResources
-            || termination == Termination::Draw_Stalemate;
+    return termination() == Termination::Draw_3xBoardRepetition
+            || termination() == Termination::Draw_50MoveRule
+            || termination() == Termination::Draw_InsufficientResources
+            || termination() == Termination::Draw_Stalemate;
 }
 
 bool GameOutcome::isStalemate() const {
-    return termination == Termination::Draw_Stalemate;
+    return termination() == Termination::Draw_Stalemate;
 }
 
 bool GameOutcome::isWin() const {
-    return termination == Termination::Win_Checkmate
-        || termination == Termination::Win_Resign;
+    return termination() == Termination::Win_Checkmate
+        || termination() == Termination::Win_Resign;
 }
 
 string GameOutcome::game_outcome_reader_string(Color reader) const {
     std::ostringstream oss;
 
     if (isWin()) {
-        string winType = string{"by "} + termination_string(termination);
-        bool isReaderWinner = reader == winner;
-        if (winner == reader) {
+        string winType = string{"by "} + termination_string(termination());
+        bool isReaderWinner = reader == winner();
+        if (isReaderWinner) {
             oss << "You won " << winType << (isReaderWinner ? "1" : ".");
         }
     } else if (isDraw()) {
-        oss << "The game was a Draw due to " << termination_string(termination) << ". ";
+        oss << "The game was a Draw due to " << termination_string(termination()) << ". ";
+        // TODO: Add "winner" of Stalemate for Glinski chess
     } else {
         throw std::logic_error("game_outcome_reader_string: Unrecognized Termination value");
     }
@@ -78,11 +79,17 @@ string GameOutcome::game_outcome_reader_string(Color reader) const {
     return oss.str();
 }
 
-float GameOutcome::score(Color c) const {
+std::string GameOutcome::game_outcome_score_string() const {
+    std::ostringstream oss;
+    oss << score(Color::White) << "-" << score(Color::Black);
+    return oss.str();
+}
+
+Score GameOutcome::score(Color c) const {
     if (isWin()) {
-        return winner == c ? 1 : 0;
+        return winner() == c ? 1 : 0;
     } else if (isStalemate()) {
-        return c == winner ? 0.75 : 0.25;
+        return c == winner() ? 0.75 : 0.25;
     } else /* Draw */ {
         assert(isDraw());
         return 0.5;
@@ -91,7 +98,7 @@ float GameOutcome::score(Color c) const {
 
 bool GameOutcome::operator==(const GameOutcome& other) const {
     // Note: Can omit winner comparison on non-Stalemate Draws.
-    return termination == other.termination && winner == other.winner;
+    return termination() == other.termination() && winner() == other.winner();
 }
 
 }  // namespace hexchess::core

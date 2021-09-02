@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "util_hexchess.h"
 
 
@@ -31,15 +33,14 @@ namespace hexchess::core {
 /// \todo [Long-term] Implement detection of a dead position.
 /// \todo [Short-term] Implement detection of insufficient resources.
 enum class Termination {
-    None,                      ///< \brief Game is still in play
-    // ====================
+    None,                      ///< \brief Game ongoing, or hasn't been checked since the last move.
     Win_Checkmate,             ///< \brief Win_Proposed_Accepted
     // Win_Proposed_Accepeted  // \brief Player, during turn, requests Win. Opponent agrees.
     Win_Resign,                ///< \brief A Player resigned instead of moving.
     // Win_Timeout,            // \brief A Player won because their opponent ran out of time.
     // Win_Timeout_Claimed,    // \brief Use when claim came after both flags fell, or after an intermediate move, or unknown.
     // ====================
-    Draw_3xRepetition,         ///< In Glinski chess, 3x repetition causes automatic Draw
+    Draw_3xBoardRepetition,    ///< In Glinski chess, 3x repetition causes automatic Draw
     Draw_50MoveRule,           ///< In Glinski chess, 50 moves without progress causes automatic Draw
 
     // Draw_5xRepetition,      ///< \brief Note: This ends the game automatically. No claim needed.
@@ -66,20 +67,45 @@ std::string termination_string(Termination t);
 
 /// \brief Records the outcome of a game.
 ///
+/// Note: Instances of this struct are only created when the game ends,
+///       so there is no need for std::optional members.
 /// If Termination is any type of win, then winner reflects the winner.
 /// Note: In Glinski chess, a Stalemate earns 3/4 point for the last mover, and 1/4 for the other,
 ///       In that case, winner is the player who last moved.
 struct GameOutcome {
-    Termination termination;  ///< How the game ended, or None, if the game is still in play.
-    Color winner;  ///< The winner if termination reflects a Win or a draw due to Stalemate.
+public:
+    GameOutcome(Termination term)
+        : _termination{term},
+          _optWinner{std::nullopt}
+    {}
+
+    GameOutcome(Termination term, Color winner)
+        : _termination{term},
+          _optWinner{std::make_optional(winner)}
+    {}
 
     bool isDraw() const;
     bool isStalemate() const;
     bool isWin() const;
 
     std::string game_outcome_reader_string(Color reader) const;
-    float score(Color c) const;
+    std::string game_outcome_score_string() const;
+    Score score(Color c) const;
+    Termination termination() const { return _termination; }
+    Color winner() const {
+        if (_optWinner == std::nullopt) {
+            throw std::logic_error("GameOutcome::winner: No winner");
+        }
+        return _optWinner.value();
+    }
+
     bool operator==(const GameOutcome& other) const;
+
+private:
+    Termination _termination;  ///< How the game ended, or None, if the game is still in play.
+    OptColor _optWinner;  ///< The winner if termination reflects a Win or a draw due to Stalemate.
 };
+
+using OptGameOutcome = std::optional<GameOutcome>;
 
 }  // namespace hexchess::core
