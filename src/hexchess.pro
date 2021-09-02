@@ -4,7 +4,7 @@
 
 TEMPLATE = app
 TARGET = hexchess
-INCLUDEPATH += .
+INCLUDEPATH += core evaluation player ui
 
 # The following define makes your compiler warn you if you use any
 # feature of Qt which has been marked as deprecated (the exact warnings
@@ -19,15 +19,28 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 QT += gui svg widgets
 QMAKE_CXX = clang++
-QMAKE_CXXFLAGS += -std=c++17 -g -fPIC
-INCLUDEPATH += core ui
+QMAKE_CXXFLAGS += -std=c++2a -g -fPIC
+QMAKE_LFLAGS += -std=c++2a -g -fPIC
 OBJECTS_DIR = obj
 DESTDIR = obj
 
 HEADERS += \
-    core/board.h core/fen.h core/geometry.h core/move.h core/variant.h core/zobrist.h \
+    core/board.h core/fen.h core/game.h \
+    core/game_outcome.h core/geometry.h core/move.h \
+    core/player_action.h core/util_hexchess.h core/variant.h \
+    core/zobrist.h \
     \
-    ui/mainWindow.h ui/boardwidget.h \
+    evaluation/evaluation.h \
+    \
+    player/player.h \
+    player/player_alpha_beta.h \
+    player/player_human_text.h \
+    player/player_simple_advancing.h \
+    player/player_simple_attacking.h \
+    player/player_simple_random.h \
+    player/search.h \
+    \
+    ui/boardwidget.h ui/mainwindow.h \
     ui/stylecolor.h ui/stylefont.h ui/styleicon.h ui/stylemeasure.h \
     ui/util_ui.h
 
@@ -35,12 +48,22 @@ SOURCES += main.cpp \
     \
     core/board.cpp \
     core/fen.cpp \
+    core/game.cpp \
+    core/game_outcome.cpp \
     core/geometry.cpp \
     core/move.cpp \
     core/util_hexchess.cpp \
     core/variant.cpp \
     core/zobrist.cpp \
     core/zobrist_table.cpp \
+    \
+    evaluation/evaluation.cpp \
+    \
+    player/player_alpha_beta.cpp \
+    player/player_human_text.cpp \
+    player/player_simple_advancing.cpp \
+    player/player_simple_attacking.cpp \
+    player/search.cpp \
     \
     ui/boardwidget.cpp \
     ui/stylecolor.cpp ui/styleicon.cpp ui/stylemeasure.cpp \
