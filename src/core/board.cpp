@@ -15,6 +15,7 @@
 
 #include <cctype>
 
+#include <map>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -35,6 +36,7 @@ using std::cout;
 using std::ostringstream;
 using std::string;
 
+using std::map;
 using std::pair;
 using std::set;
 using std::vector;
@@ -986,13 +988,15 @@ void Board<Glinski>::moveExec(Move& move) {
     (void) getLegalMoves(_mover);
 }
 
-// void moveRedo(const Move& move) {
-//     throw NotImplementedException{"Move::moveRedo"};
-// }
+template<>
+void Board<Glinski>::moveRedo(const Move& move) {
+    throw NotImplementedException{"Move::moveRedo"};
+}
 
-// void moveUndo( const Move& move) {
-//     throw NotImplementedException{"Move::moveUndo"};
-// }
+template<>
+void Board<Glinski>::moveUndo(const Move& move) {
+    throw NotImplementedException{"Move::moveUndo"};
+}
 
 // ========================================
 // Reading and writing game state
