@@ -47,17 +47,17 @@ public slots:
     // Broadcast
     virtual void initializeBoard(const Fen<V>& fen) override;
     virtual void showCheckToPlayer(Color checked, Index kingInd) override;
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
 
     // Sent individually
     virtual void showActionRequestToPlayer(Color mover) override;
     virtual void showActionToPlayer(Color mover, PlayerAction& action) override;
+    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
 
     // TODO: Receive DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Receive "superuser" board edits: addPiece, movePiece, removePiece
 
 signals:
-    virtual void sendActionToServer(Color mover, PlayerAction& action) override;
+    void sendActionToServer(Color mover, PlayerAction& action);
     // TODO: Send DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Send "superuser" board edits: addPiece, movePiece, removePiece
 
