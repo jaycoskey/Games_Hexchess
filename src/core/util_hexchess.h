@@ -66,6 +66,8 @@ using Strings = std::vector<std::string>;
 /// \brief A measure of value of a piece, or a board.
 ///        Currently expressed as millipawns.
 using Value = int;
+constexpr Value negInfinity{-1'000'000};
+constexpr Value posInfinity{+1'000'000};
 
 // ========================================
 // Enums
