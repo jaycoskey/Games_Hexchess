@@ -123,6 +123,16 @@ public:
     /// \brief Convert between representaions of a Cell.
     static Index posToIndex(const HexPos& pos) { return hexToIndex(pos.hex0, pos.hex1); }
 
+    /// To facilitate finding the en passant square after a Pawn double-step
+    static Index average(Index a, Index b) {
+        HexCoord a0 = hex0(a);
+        HexCoord a1 = hex1(a);
+        HexCoord b0 = hex0(b);
+        HexCoord b1 = hex1(b);
+
+        return hexToIndex((a0 + b0) / 2, (a1 + b1) / 2);
+    }
+
     /// \brief Returns true if the given hex coordinates are on the board.
     static bool isOnBoard(HexCoord hex0, HexCoord hex1);
     /// \brief Returns true if the given HexPos represents a Cell on the board.

@@ -94,6 +94,18 @@ void Board<Glinski>::removePiece(Index index, Color c, PieceType pt) {
 }
 
 template<>
+void Board<Glinski>::movePiece(Index from, Index to, Color c, PieceType pt) {
+    setPiece(from, c, pt, false);
+    setPiece(to, c, pt, true);
+}
+
+template<>
+void Board<Glinski>::changePieceType(Index index, Color c, PieceType ptOld, PieceType ptNew) {
+    setPiece(index, c, ptOld, false);
+    setPiece(index, c, ptNew, true);
+}
+
+template<>
 void Board<Glinski>::initialize(const Fen<Glinski>& fen) {
     // (1) Piece placement
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
@@ -993,9 +1005,63 @@ void Board<Glinski>::moveRedo(const Move& move) {
     throw NotImplementedException{"Move::moveRedo"};
 }
 
+/// \todo Use Qt's Undo framework
 template<>
 void Board<Glinski>::moveUndo(const Move& move) {
-    throw NotImplementedException{"Move::moveUndo"};
+    // TODO: Sanity check that there is actually a Move history
+    switch (move.moveEnum()) {
+    case MoveEnum::Castling:
+        // TODO: Support castling for non-Glinski variants.
+        break;
+    case MoveEnum::EnPassant: {
+        // Replace captured Pawn
+        // Note: The following is variant-specific
+        Color opp = opponent(move.mover());
+        HexDir oppFwd{V::pawnAdvanceDirs(opp)[0]};
+        HexPos captPos{V::indexToPos(move.to()) + oppFwd};
+        Index captInd = V::posToIndex(captPos);
+        addPiece(captInd, opp, PieceType::Pawn);
+        break;
+    }
+    case MoveEnum::PawnPromotion:
+        // Convert promoted piece back to Pawn
+        changePieceType(move.to(), move.mover(), move.optPromotedTo().value(), PieceType::Pawn);
+        break;
+    default:
+        // Simple move: Handled below
+        break;
+    }
+    // Move piece back to original location
+    movePiece(move.to(), move.from(), move.mover(), move.pieceType());
+
+    // Replace captured piece, if any
+    if (move.isCapture()) {
+        addPiece(move.to(), opponent(move.mover()), move.optCaptured().value());
+    }
+
+    // \todo Modify the following to support moveRedo
+
+    // Undo Zobrist hash history
+    ZHash lastHash = _zHashes.at(_zHashes.size() - 1);
+    _zHashes.pop_back();  // Remove from per-ply vector of board hashes
+    _zHashToCounters[lastHash].pop_back();  // Remove last occurrence of this hash
+
+    // Undo nonProgressCounters
+    _nonProgressCounters.pop_back();
+
+    _mover = opponent(move.mover());
+    _moveStack.pop_back();
+
+    // _optEpIndex
+    const Move& prevMove = _moveStack.at(_currentCounter - 1);
+    if (abs(V::row(prevMove.to()) - V::row(prevMove.from())) == 4) {
+        _optEpIndex = V::average(prevMove.to(), prevMove.from());
+    } else {
+        _optEpIndex = std::nullopt;
+    }
+
+    // Undo HalfMoveCounter and mover Color
+    _currentCounter -= 1;
 }
 
 // ========================================

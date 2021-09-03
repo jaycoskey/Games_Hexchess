@@ -68,6 +68,8 @@ public:
 
     /// \brief Resets bits in this class's boards to reflect that the given piece has been removed.
     void removePiece(Index index, Color c, PieceType pt);
+    void movePiece(Index from, Index to, Color c, PieceType pt);
+    void changePieceType(Index index, Color c, PieceType ptOld, PieceType ptNew);
     void initialize(const Fen<V>& fen);
 
     // ========================================
