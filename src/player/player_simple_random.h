@@ -40,10 +40,11 @@ class PlayerRandom : public Player {
 public:
     typedef Glinski V;
 
-    PlayerRandom() {}
+    PlayerRandom() : _name{"PlayerRandom"} {}
     virtual ~PlayerRandom() override {}
 
-    virtual const std::string name() const override { return "PlayerRandom"; }
+    virtual const std::string name() const override { return _name; }
+    virtual void setName(std::string name) override { _name = name; }
 
 public slots:
     // ========================================
@@ -77,6 +78,7 @@ signals:
 
 private:
     Board<V> _board{false};
+    std::string _name;
 };
 
 }  // namespace hexchess::player

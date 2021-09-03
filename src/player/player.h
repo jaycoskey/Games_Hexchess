@@ -52,6 +52,7 @@ public:
     virtual ~Player() {};
 
     virtual const std::string name() const = 0;
+    virtual void setName(std::string name) = 0;
 
 public slots:
     // Broadcast

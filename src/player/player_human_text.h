@@ -41,7 +41,8 @@ public:
     PlayerHumanText() : _board{false} {}
     virtual ~PlayerHumanText() override {};
 
-    virtual const std::string name() const override { return "PlayerHumanText"; }
+    virtual const std::string name() const override { return _name; }
+    virtual void setName(std::string name) override { _name = name; }
 
 public slots:
     // Broadcast
@@ -65,6 +66,7 @@ private:
     static const std::string _helpMessage;
 
     Board<Glinski> _board;
+    std::string _name;
 };
 
 }  // namespace hexchess::player
