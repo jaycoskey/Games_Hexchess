@@ -14,15 +14,21 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <map>
+#include <variant>
 
 #include "stylemeasure.h"
 
 
-MeasureSettings measureSettings {
-    { MeasureEnum::Board_BorderWidth, {0},      },
-    { MeasureEnum::Board_Margin,      {10},     },
-    { MeasureEnum::Cell_AspectRatio,  {1.1547}, },  // For flat-top hexagons: 2 / sqrt(3) = 1.1547
-    { MeasureEnum::Cell_BorderWidth,  {0}       },
-    { MeasureEnum::Cell_Height,       {60}      },
-    { MeasureEnum::Cell_Margin,       {0}       }
-};
+std::variant<int, Real> measureSetting(MeasureEnum mEnum) {
+    static const MeasureSettings measureSettings{
+        { MeasureEnum::Board_BorderWidth, int{0},       },
+        { MeasureEnum::Board_Margin,      int{10},      },
+
+        // For flat-top hexagons: 2 / sqrt(3) = 1.1547
+        { MeasureEnum::Cell_AspectRatio,  Real{1.1547}, },
+        { MeasureEnum::Cell_BorderWidth,  int{0}        },
+        { MeasureEnum::Cell_Height,       int{60}       },
+        { MeasureEnum::Cell_Margin,       int{0}        }
+    };
+    return measureSettings.at(mEnum);
+}

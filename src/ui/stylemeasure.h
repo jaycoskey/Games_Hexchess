@@ -16,12 +16,10 @@
 #pragma once
 
 #include <map>
+#include <variant>
 
 #include "util_ui.h"
 
-
-enum class MeasureEnum;
-using MeasureSettings = std::map<MeasureEnum, Real>;
 
 enum class MeasureEnum {
     Board_BorderWidth,
@@ -33,4 +31,7 @@ enum class MeasureEnum {
     Cell_Margin
 };
 
-extern MeasureSettings measureSettings;
+using MeasureSettings = std::map<MeasureEnum, std::variant<int, Real>>;
+
+std::variant<int, Real> measureSetting(MeasureEnum);
+// extern MeasureSettings measureSettings;
