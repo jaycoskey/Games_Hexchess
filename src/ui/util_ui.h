@@ -24,18 +24,18 @@
 
 #include "util_hexchess.h"
 
-using CellStatus = ushort;
+using CellStatusFlags = ushort;
 using Real = float;
 
 
 extern std::vector<Real> cos_at;
 extern std::vector<Real> sin_at;
 
-constexpr CellStatus CellStatus_None      = 0;
-constexpr CellStatus CellStatus_LastMoved = 1 << 0;
-constexpr CellStatus CellStatus_Selected  = 1 << 1;
-constexpr CellStatus CellStatus_Warning   = 1 << 2;
+constexpr CellStatusFlags CellStatus_None      = 0;
+constexpr CellStatusFlags CellStatus_LastMoved = 1 << 0;
+constexpr CellStatusFlags CellStatus_Selected  = 1 << 1;
+constexpr CellStatusFlags CellStatus_Warning   = 1 << 2;
 
-bool isCellLastMoved(CellStatus status);
-bool isCellSelected(CellStatus status);
-bool isCellWarning(CellStatus status);
+bool isCellLastMoved(CellStatusFlags status);
+bool isCellSelected(CellStatusFlags status);
+bool isCellWarning(CellStatusFlags status);

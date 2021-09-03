@@ -23,32 +23,36 @@ using std::vector;
 using hexchess::pi;
 
 
-vector<Real> cos_at{ []() {
-    vector<Real> result{};
+vector<Real> cos_at{ []()
+    {
+        vector<Real> result{};
 
-    for (int k = 0; k <= 6; ++k) {
-        result.push_back(std::cos(k * 2 * pi / 6));
-    }
-    return result;
-}()};
+        for (int k = 0; k <= 6; ++k) {
+            result.push_back(std::cos(k * 2 * pi / 6));
+        }
+        return result;
+    }()
+};
 
-vector<Real> sin_at { []() {
-    vector<Real> result{};
+vector<Real> sin_at { []()
+    {
+        vector<Real> result{};
 
-    for (int k = 0; k <= 6; ++k) {
-        result.push_back(std::sin(k * 2 * pi / 6));
-    }
-    return result;
-}()};
+        for (int k = 0; k <= 6; ++k) {
+            result.push_back(std::sin(k * 2 * pi / 6));
+        }
+        return result;
+    }()
+};
 
-bool isCellLastMoved(CellStatus status) {
+bool isCellLastMoved(CellStatusFlags status) {
     return (status & CellStatus_LastMoved) != CellStatus_None;
 }
 
-bool isCellSelected(CellStatus status) {
+bool isCellSelected(CellStatusFlags status) {
     return (status & CellStatus_Selected)  != CellStatus_None;
 }
 
-bool isCellWarning(CellStatus status) {
+bool isCellWarning(CellStatusFlags status) {
     return (status & CellStatus_LastMoved) != CellStatus_None;
 }
