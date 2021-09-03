@@ -491,13 +491,9 @@ void Board<Glinski>::recordObstructedHexRayCore(
 template<>
 const HexRayCores& Board<Glinski>::getObstructedHexRayCores(Index obsIndex) const {
     if (_cache.obstructedHexRayMap.contains(obsIndex)) {
-        // JMC: cout << "Board::getObstructedHexRayCores: returning " << _cache.obstructedHexRayMap.at(obsIndex).size() << " cores\n";
         return _cache.obstructedHexRayMap.at(obsIndex);
     } else {
-        // JMC: cout << "Board::getObstructedHexRayCores: returning no cores\n";
         HexRayCores result{};
-        // cout << "Board::getObstructedHexRayCores: no cores means " << result.size() << " cores\n";
-        cout << "";
         return result;
     }
 }
@@ -698,30 +694,23 @@ template<>
 bool Board<Glinski>::isOwnKingAttackedAfterOwnMove(Color mover, Index from, Index to) const
 {
     (void) to;  // Could check whether piece has moved out from the path between obstruction & King
-    // cout << "JMC: isOwnKingAttackedAfterOwnMove: Entering: mover=" << mover << "; from=" << from << "; to=" << to << "\n";
     Index kIndex = getKingIndex(mover);
-    // cout << "JMC: isOwnKingAttackedAfterOwnMove: Calling getObstructedHexRayCores with from=" << from << "\n";
     const HexRayCores& obstructed = getObstructedHexRayCores(from);
     if (obstructed.size() == 0) {
         return false;
     }
-    // cout << "JMC: isOwnKingAttackedAfterOwnMove: Called getObstructedHexRayCores. Result ('obstructed') contains " << obstructed.size() << " HexRayCores\n";
     for (const auto& [obsStart, obsDir] : obstructed) {
-        // cout << "JMC: isOwnKingAttackedAfterOwnMove: obsStart=" << obsStart << "; obsDir=" << obsDir << "\n";
         if (obsStart == from) {
-            // cout << "JMC: isOwnKingAttackedAfterOwnMove: Found an obstruction from " << from << "\n";
             // The piece moved was a slider obstruction.
             HexDir obsToKingDir = (V::indexToPos(kIndex) - V::indexToPos(obsStart));
             Short collinearTestValue = obsDir.hex0 * obsToKingDir.hex1
                                      - obsDir.hex1 * obsToKingDir.hex0;
             if (collinearTestValue == 0) {
-                // cout << "JMC: \tisOwnKingAttackedAfterOwnMove: Passed collinear test\n";
                 // They're collinear, so this Ray might now attack the King. Re-trace it.
                 for (HexPos cursor = V::indexToPos(obsStart) + obsDir;
                     V::isOnBoard(cursor);
                     cursor += obsDir)
                 {
-                    // cout << "JMC: \tisOwnKingAttackedAfterOwnMove: Tracing " << obsDir << "; at cursor=" << cursor << "\n";
                     Index curIndex = V::posToIndex(cursor);
                     if (curIndex == kIndex) {
                         return true;
