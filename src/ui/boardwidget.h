@@ -36,7 +36,7 @@
 using hexchess::core::Board;
 using hexchess::core::Glinski;
 using hexchess::core::Index;
-using hexchess::core::OptPieceType;
+using hexchess::core::OptColorPieceType;
 
 
 /// Glinski hexagonal chessboard
@@ -52,13 +52,19 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    static const int  _boardBorder;
+    static const int  _boardMargin;
+    static const Real _cellAspectRatio;
+    static const int  _cellBorder;
+    static const int  _cellHeight;
+    static const int  _cellMargin;
+
+    static const std::pair<int, int> _cellCenterCoords(Index index);
+
     // TODO: Handle style settings in Qt fashion.
     class Cell {
     public:
-        Cell(Index index,
-            OptPieceType optPieceType=std::nullopt,
-            CellStatus status=CellStatus_None
-            );
+        Cell(Index index, CellStatusFlags status=CellStatus_None);
 
         void clearLastMoved() { status &= ~CellStatus_LastMoved; }
         void clearSelected()  { status &= ~CellStatus_Selected; }
@@ -72,22 +78,12 @@ private:
         void setSelected()  { status |= CellStatus_Selected; }
         void setWarning()   { status |= CellStatus_Warning; }
 
-        bool isEmpty() { return optPieceType == std::nullopt; }
-
         Index index;
         QPolygon polygon;
-
-        OptPieceType optPieceType;
         std::string text;
-        CellStatus status;
-
-    private:
-        const std::pair<Real, Real> _cellCenterCoords(
-            Index index,
-            Real boardMargin, Real cellBorder, Real cellHeight, Real cellMargin, Real cellWidth
-            );
+        CellStatusFlags status;
     };
 
-    std::vector<Cell> cells;
-    Board<Glinski> board{};
+    Board<Glinski> _board{};
+    std::vector<Cell> _cells;
 };

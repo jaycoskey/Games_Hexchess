@@ -21,11 +21,12 @@
 #include <random>
 #include <string>
 #include <utility>
+#include <variant>
 
-#include <QtWidgets>
 #include <QImage>
 #include <QPainter>
 #include <QSvgRenderer>
+#include <QtWidgets>
 
 #include "util_hexchess.h"
 #include "variant.h"
@@ -40,6 +41,7 @@
 using std::cout;
 using std::string;
 
+using std::map;
 using std::pair;
 
 using hexchess::core::Color;
@@ -48,6 +50,68 @@ using hexchess::core::Glinski;
 using hexchess::core::PieceType;
 
 
+const int BoardWidget::_boardBorder{ []()
+    {
+        return std::get<int>(measureSetting(MeasureEnum::Board_BorderWidth));
+    }()
+};
+const int BoardWidget::_boardMargin{ []()
+    {
+        return std::get<int>(measureSetting(MeasureEnum::Board_Margin));
+    }()
+};
+const Real BoardWidget::_cellAspectRatio{ []()
+    {
+        return std::get<Real>(measureSetting(MeasureEnum::Cell_AspectRatio));
+    }()
+};
+const int BoardWidget::_cellBorder{ []()
+    {
+        return std::get<int>(measureSetting(MeasureEnum::Cell_BorderWidth));
+    }()
+};
+const int BoardWidget::_cellHeight{ []()
+    {
+        return std::get<int>(measureSetting(MeasureEnum::Cell_Height));
+    }()
+};
+const int BoardWidget::_cellMargin{ []()
+    {
+        return std::get<int>(measureSetting(MeasureEnum::Cell_Margin));
+    }()
+};
+
+// =======================================
+
+/// Returns screen coords of center of cell with given index
+const pair<int, int> BoardWidget::_cellCenterCoords(Index index) {
+    assert(index >= 0 && index < Glinski::CELL_COUNT);
+
+    static map<Index, pair<int, int>> resultCache{};
+    if (resultCache.contains(index)) {
+        return resultCache.at(index);
+    }
+
+    Real cellWidth = _cellAspectRatio * _cellHeight;
+    Real w = 0.5 * cellWidth;
+    Real cellFlatWidth = w;
+
+    int hex0 = Glinski::hex0(index);
+    int hex1 = Glinski::hex1(index);
+
+    Real x_leftMostCenter = _boardMargin + _cellMargin + w;  // x of center A1 .. A6
+    Real x_perFileOffset = 0.5 * (cellWidth + cellFlatWidth) + 2 * _cellMargin;
+    Real x = x_leftMostCenter + hex0 * x_perFileOffset;
+
+    Real y_centerOfA1 = _boardMargin + 8 * _cellHeight + 17 * _cellMargin;  // y of center of A1
+    Real y_offsetFromA1 = (_cellHeight + 2 * _cellMargin) * (0.5 * hex0 - hex1);
+    Real y = y_centerOfA1 + y_offsetFromA1;
+
+    pair<int, int> result{x, y};
+    resultCache[index] = result;
+    return result;
+}
+
 BoardWidget::BoardWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -55,17 +119,12 @@ BoardWidget::BoardWidget(QWidget *parent)
 
     // Initialize Board
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
-        cells.push_back(Cell(index, std::nullopt, CellStatus_None));
+        _cells.push_back(Cell(index, CellStatus_None));
     }
-    Real boardMargin = measureSettings[MeasureEnum::Board_Margin];
-    Real cellHeight  = measureSettings[MeasureEnum::Cell_Height];
-    Real cellMargin  = measureSettings[MeasureEnum::Cell_Margin];
+    Real cellWidth = _cellAspectRatio * _cellHeight;
 
-    Real cellAspectRatio = measureSettings[MeasureEnum::Cell_AspectRatio];
-    Real cellWidth   = cellAspectRatio * cellHeight;
-
-    int widgetWidth = 2 * boardMargin + 8.5 * cellWidth + 22 * cellMargin;
-    int widgetHeight = 2 * boardMargin + 11 * cellHeight + 22 * cellMargin;
+    int widgetWidth = 2 * _boardMargin + 8.5 * cellWidth + 22 * _cellMargin;
+    int widgetHeight = 2 * _boardMargin + 11 * _cellHeight + 22 * _cellMargin;
     resize(widgetWidth, widgetHeight);
     setMinimumWidth(widgetWidth);
     setMinimumHeight(widgetHeight);
@@ -79,12 +138,12 @@ void BoardWidget::keyPressEvent(QKeyEvent *event)
 void BoardWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     QPoint point = event->pos();
-    auto pCell = std::find_if(cells.begin(), cells.end(),
-        [point](const Cell& c) {
-            return c.polygon.containsPoint(point, Qt::OddEvenFill);
+    auto pCell = std::find_if(_cells.begin(), _cells.end(),
+        [point](const Cell& cell) {
+            return cell.polygon.containsPoint(point, Qt::OddEvenFill);
         }
     );
-    if (pCell != cells.end() && !pCell->isSelected()) {
+    if (pCell != _cells.end() && !pCell->isSelected()) {
         pCell->setSelected();
         update(pCell->polygon.boundingRect());
     }
@@ -106,13 +165,15 @@ void BoardWidget::paintEvent(QPaintEvent *event)
     const QColor selectedTextColor{colorSettings[ColorEnum::Cell_Text_Status_Selected]};
     const QColor textColor{colorSettings[ColorEnum::Cell_Text]};
 
-    for (Cell& cell : cells)
+    // Paint board
+    for (Cell& cell : _cells)
     {
         QPainterPath path;
         path.addPolygon(cell.polygon);
 
-        // Color
-        QPen pen(boardBorderColor, measureSettings[MeasureEnum::Board_BorderWidth]);
+        // Border
+        QPen pen{boardBorderColor};
+        pen.setWidth(_boardBorder);
         painter.setPen(pen);
         QColor brushColor = isCellSelected(cell.status)
                                 ? selectedCellColor
@@ -120,33 +181,11 @@ void BoardWidget::paintEvent(QPaintEvent *event)
         painter.setBrush(brushColor);
         painter.drawPath(path);
 
-        // SVG
-        Index index = cell.index;
-        if (!board.isEmpty(cell.index)) {
-            /// \todo Get piece SVGs to render inside Cells
-            Color c = board.getColorAt(index);
-            PieceType pt = board.getPieceTypeAt(index);
-            string iconPath = iconSettings[c][pt];
-            QString qIconPath = QString::fromStdString(iconPath);
-            QSvgRenderer renderer(qIconPath);
-            QImage svgImg(60, 60, QImage::Format_ARGB32);
-            svgImg.fill(0xddbbaa99);
-            QPainter painter(&svgImg);
-            renderer.render(&painter);
-
-            // QDirIterator it(".");
-            // cout << "Contents of the current directory:\n";
-            // while (it.hasNext()) {
-            //     QFile f(it.next());
-            //     cout << "\t" << f.fileName().toStdString() << "\n";
-            // }
-            // cell.pSvg = new QSvgWidget(qPath, &cell.polygon);
-            // cell.pSvg->svgWidget = QtSvg.QScgWidget();
-        }
-
         // Text
-        if (!cell.isEmpty()) {
-            painter.setPen(isCellSelected(cell.status) ? selectedTextColor : textColor);
+        if (_board.isEmpty(cell.index)) {
+            painter.setPen(isCellSelected(cell.status)
+                ? selectedTextColor
+                : textColor);
             painter.drawText(
                 cell.polygon.boundingRect(),
                 Qt::AlignCenter,
@@ -154,29 +193,36 @@ void BoardWidget::paintEvent(QPaintEvent *event)
                 );
         }
     }
+
+    // Paint pieces
+    for (Cell& cell : _cells) {
+        Index index = cell.index;
+        if (!_board.isEmpty(cell.index)) {
+            Color c = _board.getColorAt(index);
+            PieceType pt = _board.getPieceTypeAt(index, c);
+            string iconPath = iconSettings[c][pt];
+            QString qIconPath = QString::fromStdString(iconPath);
+            QSvgRenderer renderer{qIconPath /* , parent=this */ };
+
+            QPainter painter{this};
+            /// \todo Use a slightly smaller QRect
+            QRect qRect = cell.polygon.boundingRect();
+            painter.setViewport(qRect);
+            renderer.render(&painter);
+        }
+    }
 }
 
-BoardWidget::Cell::Cell(
-    Index index,
-    OptPieceType optPieceType,
-    CellStatus status
-    )
-    :
-    index{index},
-    polygon{7},
-    optPieceType{optPieceType},
-    text{Glinski::cellName(index)},
-    status{status}
+// ========================================
+// BoardWidget::Cell
+
+BoardWidget::Cell::Cell(Index index, CellStatusFlags status)
+    : index{index},
+      polygon{7},
+      text{Glinski::cellName(index)},
+      status{status}
 {
     assert(index >= 0 && index < Glinski::CELL_COUNT);
-
-    Real boardMargin = measureSettings[MeasureEnum::Board_Margin];
-
-    Real cellAspectRatio = measureSettings[MeasureEnum::Cell_AspectRatio];
-    Real cellBorder  = measureSettings[MeasureEnum::Cell_BorderWidth];
-    Real cellHeight  = measureSettings[MeasureEnum::Cell_Height];
-    Real cellMargin  = measureSettings[MeasureEnum::Cell_Margin];
-    Real cellWidth   = cellAspectRatio * cellHeight;
 
     QColor boardColor_bg = colorSettings[ColorEnum::Board_Background];
 
@@ -187,44 +233,13 @@ BoardWidget::Cell::Cell(
     QColor cellColor_selectedStatus = colorSettings[ColorEnum::Cell_Status_Selected];
     QColor cellColor_warningStatus = colorSettings[ColorEnum::Cell_Status_Warning];
 
-    const auto [cx, cy] = _cellCenterCoords(index,
-                              boardMargin, cellBorder, cellHeight, cellMargin, cellWidth
-                              );
+    const auto [cx, cy] = _cellCenterCoords(index);
     // QPolygon polygon{7};
-    Real h = 0.5 * cellHeight;
+    Real h = 0.5 * _cellHeight;
+    Real cellWidth = _cellAspectRatio * _cellHeight;
     Real w = 0.5 * cellWidth;
     Real vscale = 2 / sqrt(3);
     for (int edgeNum = 0; edgeNum <= 6; ++edgeNum) {
         polygon.setPoint(edgeNum, cx + w * cos_at[edgeNum], cy + vscale * h * sin_at[edgeNum]);
     }
-}
-
-/// Returns screen coords of center of cell with given index
-const pair<Real, Real> BoardWidget::Cell::_cellCenterCoords
-    (
-    Index index,
-    Real boardMargin,
-    Real cellBorder,
-    Real cellHeight,
-    Real cellMargin,
-    Real cellWidth
-    )
-{
-    assert(index >= 0 && index < Glinski::CELL_COUNT);
-    (void) cellBorder;  // Disable compiler warning? TODO: Add to cellMargin?
-    Real w = 0.5 * cellWidth;
-    Real cellFlatWidth = w;
-
-    int hex0 = Glinski::hex0(index);
-    int hex1 = Glinski::hex1(index);
-
-    Real x_leftMostCenter = boardMargin + cellMargin + w;  // x of center A1 .. A6
-    Real x_perFileOffset = 0.5 * (cellWidth + cellFlatWidth) + 2 * cellMargin;
-    Real x = x_leftMostCenter + hex0 * x_perFileOffset;
-
-    Real y_centerOfA1 = boardMargin + 8 * cellHeight + 17 * cellMargin;  // y of center of A1
-    Real y_offsetFromA1 = (/* 0.85 * */ cellHeight + 2 * cellMargin) * (0.5 * hex0 - hex1);
-    Real y = y_centerOfA1 + y_offsetFromA1;
-
-    return pair<Real, Real>{x, y};
 }

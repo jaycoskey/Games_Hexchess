@@ -26,22 +26,22 @@ using hexchess::core::PieceType;
 IconPaths iconSettings {
     { Color::Black,
         {
-        { PieceType::King,   "./images/pieces/bw_bgt/Chess_kdt45.svg" },
-        { PieceType::Queen,  "./images/pieces/bw_bgt/Chess_qdt45.svg" },
-        { PieceType::Rook,   "./images/pieces/bw_bgt/Chess_rdt45.svg" },
-        { PieceType::Bishop, "./images/pieces/bw_bgt/Chess_bdt45.svg" },
-        { PieceType::Knight, "./images/pieces/bw_bgt/Chess_ndt45.svg" },
-        { PieceType::Pawn,   "./images/pieces/bw_bgt/Chess_pdt45.svg" }
+        { PieceType::King,   "../resources/images/pieces/bw_bgt/Chess_kdt45.svg" },
+        { PieceType::Queen,  "../resources/images/pieces/bw_bgt/Chess_qdt45.svg" },
+        { PieceType::Rook,   "../resources/images/pieces/bw_bgt/Chess_rdt45.svg" },
+        { PieceType::Bishop, "../resources/images/pieces/bw_bgt/Chess_bdt45.svg" },
+        { PieceType::Knight, "../resources/images/pieces/bw_bgt/Chess_ndt45.svg" },
+        { PieceType::Pawn,   "../resources/images/pieces/bw_bgt/Chess_pdt45.svg" }
         }
     },
     { Color::White,
         {
-        { PieceType::King,   "./images/pieces/bw_bgt/Chess_klt45.svg" },
-        { PieceType::Queen,  "./images/pieces/bw_bgt/Chess_qlt45.svg" },
-        { PieceType::Rook,   "./images/pieces/bw_bgt/Chess_rlt45.svg" },
-        { PieceType::Bishop, "./images/pieces/bw_bgt/Chess_blt45.svg" },
-        { PieceType::Knight, "./images/pieces/bw_bgt/Chess_nlt45.svg" },
-        { PieceType::Pawn,   "./images/pieces/bw_bgt/Chess_plt45.svg" }
+        { PieceType::King,   "../resources/images/pieces/bw_bgt/Chess_klt45.svg" },
+        { PieceType::Queen,  "../resources/images/pieces/bw_bgt/Chess_qlt45.svg" },
+        { PieceType::Rook,   "../resources/images/pieces/bw_bgt/Chess_rlt45.svg" },
+        { PieceType::Bishop, "../resources/images/pieces/bw_bgt/Chess_blt45.svg" },
+        { PieceType::Knight, "../resources/images/pieces/bw_bgt/Chess_nlt45.svg" },
+        { PieceType::Pawn,   "../resources/images/pieces/bw_bgt/Chess_plt45.svg" }
         }
     }
 };
