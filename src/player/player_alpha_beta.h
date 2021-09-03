@@ -47,12 +47,11 @@ class PlayerAlphaBeta : public Player {
 public:
     typedef Glinski V;
 
-    PlayerAlphaBeta(Short min_depth=3) {}
+    PlayerAlphaBeta(Short minDepth=3) : _minDepth{minDepth} {}
     virtual ~PlayerAlphaBeta() override {};
 
-    virtual const std::string name() const override {
-        return "PlayerAlphaBeta";
-    }
+    virtual const std::string name() const override { return _name; }
+    virtual void setName(std::string name) override { _name = name; }
 
 public slots:
     // Broadcast
@@ -69,6 +68,8 @@ signals:
 
 private:
     Board<Glinski> _board{false};
+    Short _minDepth;
+    std::string _name;
 };
 
 }  // namespace hexchess::player

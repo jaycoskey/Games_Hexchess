@@ -48,7 +48,7 @@ void PlayerAlphaBeta::showCheckToPlayer(Color checked, Index kingInd) {
 void PlayerAlphaBeta::showActionRequestToPlayer(Color mover) {
     const Moves& moves = _board.getLegalMoves(mover);
     assert(moves.size() > 0);
-    const auto& [optBestMove, _] = searchAlphaBeta(_board, mover, minSearchDepth);
+    const auto& [optBestMove, _] = searchAlphaBeta(_board, mover, _minDepth);
     PlayerAction action{optBestMove.value()};
     sendActionToServer(mover, action);
 }
