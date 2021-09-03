@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cstdlib>
 #include <cstring>
 
 #include <iostream>
@@ -49,6 +50,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         cout << "Version: " << version_string() << "\n";
+        exit(0);
     } else if (argc == 2 && strcmp(argv[1], "--text") == 0) {
         std::shared_ptr<Player> player1 = std::make_shared<PlayerHumanText>();
         std::shared_ptr<Player> player2 = std::make_shared<PlayerHumanText>();
