@@ -151,7 +151,9 @@ public:
     bool isPieceAt(const Index index)                 const { return _anyPieceBits.test(index);   }
 
     /// \brief Returns a boolean reflecting whether a piece with Color \p c is present at Index \p index.
-    bool isPieceAt(const Index index, const Color c)  const { return _colorToAnyPieceBits.at(c).test(index); }
+    bool isPieceAt(const Index index, const Color c)  const {
+        return _colorToAnyPieceBits.at(c).test(index);
+    }
 
     /// \brief Returns a boolean reflecting whether a King with Color \p c is present at Index \p index.
     bool isKingAt(const Index index, const Color c)   const { return _colorToKingBits.at(c).test(index);      }
@@ -234,18 +236,18 @@ public:
     // Record current Board state in Forsyth-Edwards Notation (FEN)
     const std::string board_bits_string() /* const */;
 
-    const std::string board_pgn_string() const;
-
     const std::string board_string() /* const */;
 
     // Record current Board state in Forsyth-Edwards Notation (FEN)
     const std::string fen_string() const;
 
+    const std::string moves_pgn_string() const;
+
     // ========================================
     // Finding, getting, and caching moves
 
     void recordObstructedHexRayCore(Index obsIndex, Index rayStart, const HexDir& rayDir) const;
-    const HexRayCores& getObstructedHexRayCores(Index obsIndex) const;
+    const HexRayCores getObstructedHexRayCores(Index obsIndex) const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     "leaper" piece at location \p index with PieceType \pt and Color \c.
@@ -274,11 +276,11 @@ public:
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     piece with PieceType \pt and Color \c at location \index.
     void findPseudoLegalMoves(/* out */ Moves& moves,
-        Index index, Color c, PieceType pt
+        Index index, Color mover, PieceType pt
         ) const;
 
     /// \todo PERFORMANCE: Check if this should direct output to an iterator argument
-    void findPseudoLegalMoves(/* out */ Moves& moves, Color c) const;
+    void findPseudoLegalMoves(/* out */ Moves& moves, Color mover) const;
 
     void recordPseudoLegalMoves(const Moves& moves) const;
     Moves getPseudoLegalMoves(Color mover) const;  // Get through cache
@@ -318,7 +320,7 @@ public:
     // ========================================
     // Reading and writing game state
 
-    const Indices& attackers(Index tgtInd, const Moves& moves) const;
+    const Indices attackers(Index tgtInd, const Moves& moves) const;
 
     // bool causesCheck(const Move& move);
 
@@ -364,8 +366,6 @@ public:
 
     bool isDrawByStalemate() const;
 
-    bool isGameOver() const { return getOptOutcome() != std::nullopt; }
-
     /// \todo Implement Board::isPinned to support pinning as a board valuation feature
     // bool isPinned(Index tgtInd, Color c) const;
 
@@ -391,12 +391,12 @@ private:
 
     // =======================================
     // Move piece support
-
-    void _moveBit(std::map<Color, typename Glinski::Bits>& bits,
+    void _bitsConsistencyTest() const;
+    void _bitsMove(std::map<Color, typename Glinski::Bits>& bits,
         Color mover, Index from, Index to);
-
-    void _moveBit(typename Glinski::Bits& bits,
+    void _bitsMove(typename Glinski::Bits& bits,
         Index from, Index to);
+    void _bitsReset(Index index, Color c, PieceType pt);
 
     // =======================================
     // Non-piece data
@@ -418,7 +418,7 @@ private:
     /// \brief For each HalfMoveCounter, counter ticks since capture or Pawn move.
     Short _nonProgressCounter{0};
     Shorts _nonProgressCounters{};
-    HalfMoveCounter _currentCounter{1};
+    HalfMoveCounter _currentCounter{0};
 
     // Hash history
     std::map<ZHash, std::vector<HalfMoveCounter>> _zHashToCounters{};  // To track repeats
