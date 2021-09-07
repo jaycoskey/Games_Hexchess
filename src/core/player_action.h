@@ -1,4 +1,3 @@
-// Games_Chess
 // Copyright (C) 2021, by Jay M. Coskey
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,6 +15,10 @@
 
 #pragma once
 
+#include <cassert>
+
+#include <string>
+
 #include "move.h"
 
 
@@ -23,9 +26,9 @@ namespace hexchess::core {
 
 enum class PlayerActionEnum {
     Move,
-    Offer_Draw,
-    Offer_Draw_Accept,
-    Offer_Draw_Decline,
+    Draw_Offer,
+    Draw_Accept,
+    Draw_Decline,
     // Propose_Resignation        // Player suggests that opponent will lose
     // Propose_Resignation_Accept // Accept resignation proposed by opponent
     Resign
@@ -33,8 +36,16 @@ enum class PlayerActionEnum {
     // Timeout_Claim, // Claim timeout based on clock not auto-enforced
 };
 
+const std::string player_action_enum_string(PlayerActionEnum pae);
+
 class PlayerAction {
 public:
+    // Registering with Qt requires a public default construtor
+    PlayerAction()
+        : _playerActionEnum{PlayerActionEnum::Resign}
+        , _optMove{std::nullopt}
+    { }
+
     PlayerAction(PlayerActionEnum aenum)
         : _playerActionEnum{aenum},
           _optMove{std::nullopt}
@@ -48,7 +59,15 @@ public:
     { }
 
     PlayerActionEnum playerActionEnum() { return _playerActionEnum; }
+
     Move& move() { return _optMove.value(); }
+
+    std::string player_action_string(bool doChecks) {
+        return player_action_enum_string(_playerActionEnum) + ": "
+                   + (_optMove.has_value()
+                         ? _optMove.value().move_pgn_string(doChecks)
+                         : "NoMove");
+    }
 
 private:
     PlayerActionEnum _playerActionEnum;
