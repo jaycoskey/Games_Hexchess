@@ -16,12 +16,14 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <fstream>
 #include <iostream>
-
+#include <streambuf>
 
 #include "board.h"
 #include "game.h"
 #include "player.h"
+#include "player_action.h"
 #include "player_human_text.h"
 #include "player_simple_random.h"
 #include "version.h"
@@ -35,23 +37,33 @@ using hexchess::version_string;
 
 using hexchess::core::Color;
 using hexchess::core::Game;
+using hexchess::core::PlayerAction;
+using hexchess::core::staticMetaObject;
 
 using hexchess::player::connectSignalsToSlots;
 using hexchess::player::Player;
 using hexchess::player::PlayerHumanText;
 using hexchess::player::PlayerRandom;
 
+const char* GLINSKI_DEMO_GAME1{"../resources/games/pgn/Bodor_Hexodus_1999.pgn"};
+const char* GLINSKI_DEMO_GAME2{"../resources/games/pgn/Mackowiak_Hexodus_1999.pgn"};
+const char* GLINSKI_DEMO_GAME3{"../resources/games/pgn/Schenkerik_Hexodus_1999.pgn"};
+
 /// \todo Modify to support multiple variants
 int main(int argc, char *argv[]) {
+    hexchess::events_verbose = true;
+    qRegisterMetaType<Color>("Color");
+    qRegisterMetaType<PlayerAction>("PlayerAction");
     QApplication a(argc, argv);
 
-    Game game{false};
+    Game game{true};
+    // cout << "Game created. currentCounter=" << game.board.currentCounter() << "\n";
     MainWindow mw{};
 
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         cout << "Version: " << version_string() << "\n";
         exit(0);
-    } else if (argc == 2 && strcmp(argv[1], "--text") == 0) {
+    } else if (argc == 2 && strcmp(argv[1], "--test_load") == 0) {
         std::shared_ptr<Player> player1 = std::make_shared<PlayerHumanText>();
         std::shared_ptr<Player> player2 = std::make_shared<PlayerHumanText>();
         game.setPlayer1(player1);
@@ -61,9 +73,35 @@ int main(int argc, char *argv[]) {
         PlayerHumanText *p2 = dynamic_cast<PlayerHumanText*>(player2.get());
 
         hexchess::player::connectSignalsToSlots(game, p1, p2);
-        game.sendBoardInitializationToPlayers(Glinski::fenInitial);
+
+        std::ifstream pgnStream{GLINSKI_DEMO_GAME1};
+        std::string pgnStr{
+            std::istreambuf_iterator<char>(pgnStream),
+            std::istreambuf_iterator<char>()};
+        cout << "pgnStr=" << pgnStr << "\n";
+        game.load_pgn(pgnStr);
+
+        // Original argument: Glinski::fenInitial
+        game.sendBoardInitializationToPlayers(game.board.fen());
         game.sendActionRequestToPlayer1(Color::White);
+    } else if (argc == 2 && strcmp(argv[1], "--test_random") == 0) {
+        std::shared_ptr<Player> player1 = std::make_shared<PlayerRandom>();
+        std::shared_ptr<Player> player2 = std::make_shared<PlayerRandom>();
+        game.setPlayer1(player1);
+        game.setPlayer2(player2);
+        game.player1->setName("Wilma");
+        game.player2->setName("Basho");
+
+        PlayerRandom *p1 = dynamic_cast<PlayerRandom*>(player1.get());
+        PlayerRandom *p2 = dynamic_cast<PlayerRandom*>(player2.get());
+
+        // TODO: Clean up
+        hexchess::player::connectSignalsToSlots(game, p1, p2);
+        game.board.initialize(Glinski::fenInitial);
+        game.sendBoardInitializationToPlayers(Glinski::fenInitial);
+        game.sendActionRequestToPlayer1(game.board.mover());
     } else {
+        // GUI
         std::shared_ptr<Player> player1 = std::make_shared<PlayerRandom>();
         std::shared_ptr<Player> player2 = std::make_shared<PlayerRandom>();
         game.setPlayer1(player1);
@@ -71,8 +109,8 @@ int main(int argc, char *argv[]) {
 
         PlayerRandom *p1 = dynamic_cast<PlayerRandom*>(player1.get());
         PlayerRandom *p2 = dynamic_cast<PlayerRandom*>(player2.get());
-
         hexchess::player::connectSignalsToSlots(game, p1, p2);
+
         mw.show();
     }
     return a.exec();
