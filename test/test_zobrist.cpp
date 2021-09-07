@@ -37,7 +37,6 @@ using hexchess::core::ZHash;
 using hexchess::core::ZIndex;
 using hexchess::core::Zobrist;
 
-using hexchess::core::color_string;
 using hexchess::core::piece_fen_string;
 using hexchess::core::piece_type_string;
 using hexchess::core::randomBitstring;
