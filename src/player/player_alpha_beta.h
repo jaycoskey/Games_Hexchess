@@ -55,16 +55,16 @@ public:
 
 public slots:
     // Broadcast
-    virtual void initializeBoard(const Fen<V>& fen) = 0;
-    virtual void showCheckToPlayer(Color checked, Index kingInd) = 0;
+    virtual void initializeBoard(const Fen<V>& fen) override;
+    virtual void showCheckToPlayer(Color checked, Index kingInd) override;
 
     // Sent individually
-    virtual void showActionRequestToPlayer(Color mover) = 0;
-    virtual void showActionToPlayer(Color mover, PlayerAction& action) = 0;
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) = 0;
+    virtual void showActionRequestToPlayer(Color mover) override;
+    virtual void showActionToPlayer(Color mover, PlayerAction& action) override;
+    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
 
 signals:
-    void sendActionToServer(Color mover, PlayerAction& action);
+    void sendActionToServer(Color mover, PlayerAction action);
 
 private:
     Board<Glinski> _board{false};

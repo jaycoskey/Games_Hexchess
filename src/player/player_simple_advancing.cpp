@@ -37,7 +37,7 @@ Value advancingMoveValuator(const Board<Glinski>& b, const Move& m) {
    Value result = 0;
 
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
-        OptColorPieceType& ocpt = b.piecesSparse()[index];
+        OptColorPieceType ocpt = b.piecesSparse().at(index);
         if (ocpt.has_value()) {
             auto [c, pt] = ocpt.value();
             if (c == b.mover()) {
@@ -78,8 +78,8 @@ void PlayerAdvancing::showActionToPlayer(Color mover, PlayerAction& action) {
     }
 }
 
-void PlayerAdvancing::showGameOutcomeToPlayer(Color reader,
-                                              const GameOutcome& gameOutcome)
+void PlayerAdvancing::showGameOutcomeToPlayer(
+        Color reader, const GameOutcome& gameOutcome)
 {
     // No action needed for this computer player
 }

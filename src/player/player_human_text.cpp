@@ -103,13 +103,20 @@ void PlayerHumanText::showActionRequestToPlayer(Color mover) {
         if (input == "HELP") {
             cout << _helpMessage;
         } else if (input == "DRAW") {
-            PlayerAction action{PlayerActionEnum::Offer_Draw};
+            PlayerAction action{PlayerActionEnum::Draw_Offer};
             sendActionToServer(mover, action);
             break;
         } else if (input == "RESIGN") {
             PlayerAction action{PlayerActionEnum::Resign};
             sendActionToServer(mover, action);
             break;
+        } else if (input == "MOVES") {
+            cout << "Legal moves: ";
+            for (const Move& move : legalMoves) {
+                cout << move.move_pgn_string(false) << ", ";
+            }
+            cout << "\n";
+            continue;
         } else {
             Strings parts = split(' ', input);
             if (parts.size() != 2) {
@@ -158,13 +165,15 @@ void PlayerHumanText::showActionToPlayer(Color mover, PlayerAction& action) {
         _board.moveExec(action.move());
         cout << _board.board_string() << "\n";
         break;
-    case PlayerActionEnum::Offer_Draw:
+    case PlayerActionEnum::Draw_Offer:
+        throw NotImplementedException{"PlayerHumanText::showActionToPlayer - Draw_Offer"};
+        break;
+    case PlayerActionEnum::Draw_Accept:
+        throw NotImplementedException{"PlayerHumanText::showActionToPlayer - Draw_Accept"};
         // TODO: Implement
         break;
-    case PlayerActionEnum::Offer_Draw_Accept:
-        // TODO: Implement
-        break;
-    case PlayerActionEnum::Offer_Draw_Decline:
+    case PlayerActionEnum::Draw_Decline:
+        throw NotImplementedException{"PlayerHumanText::showActionToPlayer - Draw_Decline"};
         // TODO: Implement
         break;
     case PlayerActionEnum::Resign:

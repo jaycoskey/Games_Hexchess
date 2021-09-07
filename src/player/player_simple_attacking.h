@@ -67,7 +67,7 @@ public slots:
     virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
 
 signals:
-    void sendActionToServer(Color mover, PlayerAction& action);
+    void sendActionToServer(Color mover, PlayerAction action);
 
 private:
     Board<V> _board{false};

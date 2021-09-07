@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include <QMetaObject>
 #include <QObject>
 
 #include "board.h"
@@ -58,7 +59,7 @@ public slots:
     // TODO: Receive "superuser" board edits: addPiece, movePiece, removePiece
 
 signals:
-    void sendActionToServer(Color mover, PlayerAction& action);
+    void sendActionToServer(Color mover, PlayerAction action);
     // TODO: Send DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Send "superuser" board edits: addPiece, movePiece, removePiece
 
