@@ -26,10 +26,7 @@
 namespace hexchess::player {
 
 using core::Board;
-using core::Glinski;
-using core::Index;
 using core::Move;
-using core::OptColorPieceType;
 using core::PlayerAction;
 using core::PlayerActionEnum;
 
