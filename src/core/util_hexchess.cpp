@@ -26,6 +26,11 @@
 using std::string;
 
 
+namespace hexchess {
+    bool events_verbose = false;
+}
+
+
 namespace hexchess::core {
 
 template<typename Variant>
@@ -33,8 +38,12 @@ typename Variant::Bits indexToBits(Index index) {
     return Variant::Bits(1 << index);
 }
 
-const string color_string(Color c) {
+const string color_short_string(Color c) {
     return c == Color::Black ? "B" : "W";
+}
+
+const string color_long_string(Color c) {
+    return c == Color::Black ? "Black" : "White";
 }
 
 PieceType piece_type_parse(char ch) {
@@ -75,7 +84,7 @@ const string piece_fen_string(Color c, PieceType pt) {
 }
 
 const string piece_string(Color c, PieceType pt) {
-    string result = color_string(c) + piece_type_string(pt);
+    string result = color_short_string(c) + piece_type_string(pt);
     return result;
 }
 

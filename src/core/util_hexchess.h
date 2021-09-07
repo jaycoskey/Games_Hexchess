@@ -25,8 +25,15 @@
 #include <ostream>
 #include <vector>
 
+#include <QObject>
+
+
+namespace hexchess {
+    extern bool events_verbose;
+}
 
 namespace hexchess::core {
+Q_NAMESPACE
 
 // ========================================
 // Fundamental types
@@ -97,18 +104,25 @@ inline std::ostream& operator<<(std::ostream& os, CellShade cs) {
     return os;
 }
 
-
 /// \brief Color refers to the two players in two-player chess variants, whether the pieces
 ///     used to show the board are Black and White, or some other colors.
 enum class Color {
     Black,
     White
 };
+Q_ENUM_NS(Color)
+
 using OptColor = std::optional<Color>;
+
 inline Color opponent(Color c) { return c == Color::Black ? Color::White : Color::Black; }
-const std::string color_string(Color c);
+inline Color nextPlayer(Color c) { return opponent(c); }
+inline Color prevPlayer(Color c) { return opponent(c); }
+
+const std::string color_long_string(Color c);
+const std::string color_short_string(Color c);
+
 inline std::ostream& operator<<(std::ostream& os, Color c) {
-    os << color_string(c);
+    os << color_short_string(c);
     return os;
 }
 
