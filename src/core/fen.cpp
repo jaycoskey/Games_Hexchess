@@ -73,7 +73,8 @@ const PiecesSparse Fen<Glinski>::fen_board_parse(const string& fenStr, bool verb
             }
         }
     }
-    assert(rowNum == Glinski::ROW_COUNT - 1);  // Note: FEN string does not end with '/'
+    // Note: FEN board string does not end with '/'
+    assert(rowNum == Glinski::ROW_COUNT - 1);
     return result;
 }
 
@@ -132,8 +133,8 @@ Fen<Glinski>::Fen(const string& s) {
     optEpIndex = fenParts[3] == "-"
                      ? std::nullopt
                      : std::make_optional(V::cellNameToIndex(fenParts[3]));
-    currentCounter = std::stoi(fenParts[4]);
-    // Note: Full move counter == (currentCounter + 1) / 2
+    currentCounter = std::stoi(fenParts[4]) - 1;  // currentCounter is zero-based
+    // Note: Full move counter is derived from currentCounter
 }
 
 // ========================================
@@ -151,8 +152,8 @@ const string Fen<Glinski>::fen_string() {
                ? Glinski::cellName(optEpIndex.value())
                : "-")
         << " "
-        << currentCounter << " "
-        << (currentCounter + 1) / 2
+        << currentCounter + 1 << " "  // currentCounter is zero-based
+        << (currentCounter + 2) / 2
         ;
 
     return oss.str();

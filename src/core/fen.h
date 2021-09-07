@@ -56,7 +56,7 @@ struct Fen {
     Color mover;
     // V::Bits _castlingBits;  /// \todo Add support for castling to class Fen
     OptIndex optEpIndex;
-    HalfMoveCounter currentCounter;
+    HalfMoveCounter currentCounter;  // Zero-based
 };
 
 }  // namespace hexchess::core
