@@ -18,9 +18,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 QT += gui svg widgets
-QMAKE_CXX = clang++
+QMAKE_CXX = g++
 QMAKE_CXXFLAGS += -std=c++2a -g -fPIC
-QMAKE_LFLAGS += -std=c++2a -g -fPIC
+
+# The flag -fstandalone-debug is only supported clang++, but not g++
+# QMAKE_CXXFLAGS += -fstandalone-debug
+
+QMAKE_CXXFLAGS_WARN_ONE = -Werror -Wno-error=unused-parameter
+MOC_DIR = obj
 OBJECTS_DIR = obj
 DESTDIR = obj
 
@@ -54,6 +59,7 @@ SOURCES += main.cpp \
     core/game_outcome.cpp \
     core/geometry.cpp \
     core/move.cpp \
+    core/player_action.cpp \
     core/util_hexchess.cpp \
     core/variant.cpp \
     core/zobrist.cpp \
@@ -65,6 +71,7 @@ SOURCES += main.cpp \
     player/player_human_text.cpp \
     player/player_simple_advancing.cpp \
     player/player_simple_attacking.cpp \
+    player/player_simple_random.cpp \
     player/search.cpp \
     \
     ui/boardwidget.cpp \
