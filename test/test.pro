@@ -10,6 +10,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 QT += gui svg widgets
 QMAKE_CXX = clang++
 QMAKE_CXXFLAGS += -std=c++2a -g -fPIC
+QMAKE_CXXFLAGS_WARN_ON = -Werror \
+    -Wno-error=unused-parameter -Wno-error=unknown-escape-sequence
 QMAKE_LIBS += -lgtest
 # QMAKE_LFLAGS +=
 OBJECTS_DIR = obj
@@ -20,10 +22,6 @@ PLAYER = ../src/player
 UI = ../src/ui
 TEST = .
 
-# $$TEST/test_board.h $$TEST/test_fen.h $$TEST/test_game.h \
-# $$TEST/test_geometry.h $$TEST/test_move.h $$TEST/test_player.h \
-# $$TEST/test_zobrist.h \
-#
 HEADERS += \
     $$CORE/board.h $$CORE/fen.h $$CORE/game.h \
     $$CORE/game_outcome.h $$CORE/geometry.h $$CORE/move.h \
@@ -44,10 +42,11 @@ SOURCES += $$TEST/test.cpp \
     \
     $$CORE/board.cpp $$CORE/fen.cpp $$CORE/game.cpp \
     $$CORE/game_outcome.cpp $$CORE/geometry.cpp $$CORE/move.cpp \
-    $$CORE/util_hexchess.cpp $$CORE/variant.cpp $$CORE/zobrist.cpp \
-    $$CORE/zobrist_table.cpp \
+    $$CORE/player_action.cpp $$CORE/util_hexchess.cpp $$CORE/variant.cpp \
+    $$CORE/zobrist.cpp $$CORE/zobrist_table.cpp \
     \
     $$PLAYER/player_simple_advancing.cpp \
+    $$PLAYER/player_simple_random.cpp \
     \
     $$UI/boardwidget.cpp $$UI/stylecolor.cpp $$UI/styleicon.cpp \
     $$UI/stylemeasure.cpp $$UI/util_ui.cpp
