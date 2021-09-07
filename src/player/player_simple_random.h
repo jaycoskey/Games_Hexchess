@@ -15,12 +15,13 @@
 
 #pragma once
 
+#include <time.h>
+
 #include "board.h"
 #include "fen.h"
+#include "game_outcome.h"
 #include "player.h"
 #include "player_action.h"
-#include "util.h"
-#include "util_hexchess.h"
 #include "variant.h"
 
 
@@ -31,7 +32,6 @@ using core::Color;
 using core::Fen;
 using core::Move;
 using core::PlayerAction;
-using core::PlayerActionEnum;
 using core::Glinski;
 
 class PlayerRandom : public Player {
@@ -49,32 +49,17 @@ public:
 public slots:
     // ========================================
     // Broadcast
-    virtual void initializeBoard(const Fen<V>& fen) override {
-        _board.initialize(fen);
-    }
-    virtual void showCheckToPlayer(Color checked, Index kingInd) override {
-        // No action needed; Computer player will detect check
-    }
+    virtual void initializeBoard(const Fen<V>& fen) override;
+    virtual void showCheckToPlayer(Color checked, Index kingInd) override;
 
     // ========================================
     // Sent individually
-    virtual void showActionRequestToPlayer(Color mover) override {
-        const Move& move = chooseRandom(_board.getLegalMoves(_board.mover()));
-        PlayerAction action{move};
-        sendActionToServer(mover, action);
-    }
-    virtual void showActionToPlayer(Color mover, PlayerAction& action) override {
-        // TODO: Support Draw offers, acceptances, and declines
-        if (action.playerActionEnum() == PlayerActionEnum::Move) {
-            _board.moveExec(action.move());
-        }
-    }
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override {
-        // No action needed; Computer player will detect check
-    }
+    virtual void showActionRequestToPlayer(Color mover) override;
+    virtual void showActionToPlayer(Color mover, PlayerAction& action) override;
+    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
 
 signals:
-    void sendActionToServer(Color mover, PlayerAction& action);
+    void sendActionToServer(Color mover, PlayerAction action);
 
 private:
     Board<V> _board{false};
