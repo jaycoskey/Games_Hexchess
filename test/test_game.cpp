@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <cassert>
-
 #include <iostream>
 #include <memory>
 
@@ -42,7 +40,7 @@ using hexchess::player::PlayerRandom;
 
 /// As of 2021-08-19, fails with NotImplementedException (Game::play())
 TEST(GameTest, GameBasic) {
-    bool verbose=false;
+    bool verbose = false;
 
     std::shared_ptr<Player> player1 = std::make_shared<PlayerRandom>();
     std::shared_ptr<Player> player2 = std::make_shared<PlayerRandom>();

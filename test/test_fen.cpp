@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <cassert>
-
 #include <iostream>
 
 #include <gtest/gtest.h>
@@ -36,8 +34,8 @@ TEST(FenTest, FenBasic) {
     string fenInitial = Glinski::fenInitial;
     if (verbose) { cout << "FEN initial: " << fenInitial << "\n"; }
     Fen<Glinski> fen{fenInitial};
-    assert(fen.piecesSparse.size() == Glinski::CELL_COUNT);
+    ASSERT_EQ(fen.piecesSparse.size(), Glinski::CELL_COUNT);
     string fenStr = fen.fen_string();
     if (verbose) { cout << "FEN derived: " << fenStr << "\n"; }
-    assert(fenStr == fenInitial);
+    ASSERT_EQ(fenStr, fenInitial);
 }

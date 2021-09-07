@@ -43,6 +43,6 @@ TEST(PlayerTest, PlayerAdvancing) {
     PlayerAction nextAction = player.getNextAction(Glinski::fenInitial);
 
     // Bishops can advance furthest on first move
-    assert(nextAction.getMove().pieceType() == PieceType::Bishop);
+    ASSERT_EQ(nextAction.getMove().pieceType(), PieceType::Bishop);
 }
 #endif  // NOTYET

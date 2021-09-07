@@ -57,7 +57,7 @@ TEST(BoardTest, BoardBishopShades) {
                 bishopCellIndices.push_back(index);
             }
         }
-        assert(bishopCellIndices.size() == 3);
+        ASSERT_EQ(bishopCellIndices.size(), 3);
 
         vector<CellShade> bishopCellShades{};
         transform_push_back_if(
@@ -74,10 +74,10 @@ TEST(BoardTest, BoardBishopShades) {
             );
 
         // There are three Shades.
-        assert(bishopCellShades.size() == 3);
+        ASSERT_EQ(bishopCellShades.size(), 3);
 
         // All three Shades are distinct.
-        assert(std::set(bishopCellShades.cbegin(), bishopCellShades.cend()).size() == 3);
+        ASSERT_EQ(std::set(bishopCellShades.cbegin(), bishopCellShades.cend()).size(), 3);
     }
 }
 
@@ -85,21 +85,10 @@ TEST(BoardTest, BoardBishopShades) {
 ///
 /// For more information on Forsyth-Edwards Notation (FEN), see Wikipedia.
 TEST(BoardTest, BoardFen) {
-    bool verbose=false;
-
     Board<Glinski> b{};
-    if (verbose) {
-        cout << "========================================\n";
-        cout << b.board_string() << "\n";
-        cout << "========================================\n";
-    }
     string fen_init = decltype(b)::V::fenInitial;
     string fen_derived = b.fen_string();
-    if (verbose) {
-        cout << "FEN initial = \"" << fen_init    << "\"\n";
-        cout << "FEN(board)  = \"" << fen_derived << "\"\n";
-    }
-    assert(fen_derived == fen_init);
+    ASSERT_EQ(fen_init, fen_derived);
 }
 
 /// \brief Test: All of a Knight's moves land on a cell differently shaded than the starting cell.
@@ -114,14 +103,14 @@ TEST(BoardTest, BoardKnightMoves) {
             knightDests.push_back(Glinski::posToIndex(centerPos + knightLeapDir));
         }
     }
-    assert(knightDests.size() == 12);
+    ASSERT_EQ(knightDests.size(), 12);
 
     std::vector<CellShade> knightDestShades{};
     for (Index knightDest : knightDests) {
         knightDestShades.push_back(Glinski::cellShade(knightDest));
     };
 
-    assert(std::all_of(
+    ASSERT_TRUE(std::all_of(
         knightDestShades.cbegin(),
         knightDestShades.cend(),
         [centerShade](CellShade shade) { return shade != centerShade; }
@@ -130,7 +119,7 @@ TEST(BoardTest, BoardKnightMoves) {
 
 /// \brief Test: The piece counts for a starting position match the expected values.
 TEST(BoardTest, BoardPieceCount) {
-    bool verbose=false;
+    bool verbose = false;
 
     Board<Glinski> b{};
 
@@ -146,13 +135,13 @@ TEST(BoardTest, BoardPieceCount) {
             cout << "\tPawns:   " << b.pawnBits(c).count()   << "\n";
         }
 
-        assert(b.anyPieceBits(c).count() == 18);
-        assert(b.kingBits(c).count() == 1);
-        assert(b.queenBits(c).count() == 1);
-        assert(b.rookBits(c).count() == 2);
-        assert(b.bishopBits(c).count() == 3);
-        assert(b.knightBits(c).count() == 2);
-        assert(b.pawnBits(c).count() == 9);
+        ASSERT_EQ(b.anyPieceBits(c).count(), 18);
+        ASSERT_EQ(b.kingBits(c).count(), 1);
+        ASSERT_EQ(b.queenBits(c).count(), 1);
+        ASSERT_EQ(b.rookBits(c).count(), 2);
+        ASSERT_EQ(b.bishopBits(c).count(), 3);
+        ASSERT_EQ(b.knightBits(c).count(), 2);
+        ASSERT_EQ(b.pawnBits(c).count(), 9);
     }
 }
 
@@ -160,14 +149,14 @@ TEST(BoardTest, BoardPieceCount) {
 TEST(BoardTest, BoardPiecePlacement) {
     Board<Glinski> b{};
     Index centerIndex = 45;
-    assert(b.isEmpty(centerIndex));
+    ASSERT_TRUE(b.isEmpty(centerIndex));
 
     b.addPiece(centerIndex, Color::Black, PieceType::Knight);
-    assert(b.getColorAt(centerIndex) == Color::Black);
-    assert(b.getPieceTypeAt(centerIndex) == PieceType::Knight);
+    ASSERT_EQ(b.getColorAt(centerIndex), Color::Black);
+    ASSERT_EQ(b.getPieceTypeAt(centerIndex), PieceType::Knight);
 
     b.removePiece(centerIndex, Color::Black, PieceType::Knight);
-    assert(b.isEmpty(centerIndex));
+    ASSERT_TRUE(b.isEmpty(centerIndex));
 
-    assert(b.zobristHash() == 0x712bf5ea63571cf5);
+    ASSERT_EQ(b.zobristHash(), 0x712bf5ea63571cf5);
 };

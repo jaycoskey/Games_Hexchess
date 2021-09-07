@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <cassert>
 #include <cstring>
 
 #include <iostream>
@@ -64,25 +63,25 @@ void print_indexToHex1() {
 
 /// \brief Test: Hex coordinate functions and addition of HexPos + HexDir work as expected.
 TEST(GeometryTest, GeometryPositiveDirection) {
-    bool verbose=false;
+    bool verbose = false;
 
     typedef Glinski V;
 
     const Index CENTER_INDEX = 45;
     HexPos knightHexPos{V::hex0(CENTER_INDEX), V::hex1(CENTER_INDEX)};
-    assert(knightHexPos.hex0 == 5);
-    assert(knightHexPos.hex1 == 5);
+    ASSERT_EQ(knightHexPos.hex0, 5);
+    ASSERT_EQ(knightHexPos.hex1, 5);
 
     if (verbose) {
         cout << "Center cell index = " << std::to_string(V::posToIndex(knightHexPos)) << "\n";
         cout << "Center cell name  = " << V::cellName(V::posToIndex(knightHexPos)) << "\n";
     }
 
-    assert(V::cellName(V::posToIndex(knightHexPos)) == "F6");
+    ASSERT_EQ(V::cellName(V::posToIndex(knightHexPos)), "F6");
 
     HexDir knightLeap{1, 2};
     HexPos knightDest = knightHexPos + knightLeap;
-    assert(knightDest.hex0 == 6);
-    assert(knightDest.hex1 == 7);
-    assert(V::posToIndex(knightDest) == 65);
+    ASSERT_EQ(knightDest.hex0, 6);
+    ASSERT_EQ(knightDest.hex1, 7);
+    ASSERT_EQ(V::posToIndex(knightDest), 65);
 }

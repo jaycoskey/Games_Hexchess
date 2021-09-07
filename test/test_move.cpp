@@ -72,7 +72,7 @@ TEST(MoveTest, MoveCountKing) {
     if (verbose) {
         cout << "King:   Move count = " << move_count << "\n";
     }
-    // TODO: assert(move_count == ??);
+    // TODO: ASSERT_EQ(move_count, ??);
 }
 
 /// \brief Test: Test the count of all Queen moves over all starting points.
@@ -84,7 +84,7 @@ TEST(MoveTest, MoveCountQueen) {
     if (verbose) {
         cout << "Queen:  Move count = " << move_count << "\n";
     }
-    // TODO: assert(move_count == ??);
+    // TODO: ASSERT_EQ(move_count, ??);
 }
 
 /// \brief Test: Test the count of all Rook moves over all starting points.
@@ -96,7 +96,7 @@ TEST(MoveTest, MoveCountRook) {
     if (verbose) {
         cout << "Rook:   Move count = " << move_count << "\n";
     }
-    // TODO: assert(move_count == ??);
+    // TODO: ASSERT_EQ(move_count, ??);
 }
 
 /// \brief Test: Test the count of all Bishop moves over all starting points.
@@ -108,7 +108,7 @@ TEST(MoveTest, MoveCountBishop) {
     if (verbose) {
         cout << "Bishop: Move count = " << move_count << "\n";
     }
-    // TODO: assert(move_count == ??);
+    // TODO: ASSERT_EQ(move_count, ??);
 }
 
 /// \brief Test: Test the count of all Knight moves over all starting points.
@@ -119,38 +119,25 @@ TEST(MoveTest, MoveCountKnight) {
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
         move_count += Glinski::knightDests[index].size();
     }
-    // TODO: assert(move_count == ??);
+    // TODO: ASSERT_EQ(move_count, ??);
 }
 
 /// \brief Test: Test the count of all legal starting moves.
 TEST(MoveTest, MoveCountBoard) {
-    bool verbose = false;
+    bool verbose = true;
 
     Board<Glinski> b{};  // Initial game layout
     Moves bMoves = b.getLegalMoves(Color::Black);
     Moves wMoves = b.getLegalMoves(Color::White);
 
-    if (verbose) {
-        cout << "Black moves from initial board layout: " << bMoves.size() << "\n";
-        cout << "White moves from initial board layout: " << wMoves.size() << "\n";
-    }
     Size kCount = 2;
     Size qCount = 6;
     Size rCount = 6;
     Size bCount = 12;
     Size nCount = 8;
     Size pCount = 17;
-    Size expectedCount = kCount + qCount + rCount + bCount + nCount + pCount;
-    assert(expectedCount == 51);
-
-    if (bMoves.size() != expectedCount) {
-        cout << "test_move_count_board: bMoves: "
-             << bMoves.size() << " != " << expectedCount << "\n";
-        assert(false);
-    }
-    if (wMoves.size() != expectedCount) {
-        cout << "test_move_count_board: wMoves: "
-             << wMoves.size() << " != " << expectedCount << "\n";
-        assert(false);
-    }
+    Size expectedCount = kCount + qCount + rCount
+                       + bCount + nCount + pCount;
+    ASSERT_EQ(bMoves.size(), expectedCount);
+    ASSERT_EQ(wMoves.size(), expectedCount);
 }
