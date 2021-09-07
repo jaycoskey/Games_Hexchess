@@ -15,6 +15,7 @@
 
 #include <cassert>
 
+#include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -22,6 +23,7 @@
 #include "game_outcome.h"
 #include "util_hexchess.h"
 
+using std::cout;
 using std::string;
 
 using std::map;
@@ -31,6 +33,7 @@ namespace hexchess::core {
 
 string termination_string(Termination t) {
     static map<Termination, string> t2s {
+        { Termination::None,              "none"                        },
         { Termination::Win_Checkmate,     "checkmate"                   },
         { Termination::Win_Resign,        "resignation"                 },
         { Termination::Draw_3xBoardRepetition, "three-time board repetition" },
