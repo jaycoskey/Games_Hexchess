@@ -60,7 +60,7 @@ std::pair<std::optional<Move>, Value> searchAlphaBeta(
 {
     constexpr Short maxNonQuiescentDepthAdded = 3;  // Avoid diving too deep
 
-    if (depthRemaining == 0 || b.isGameOver()) {
+    if (depthRemaining == 0 || b.getIsGameOver()) {
         return mkPair(std::nullopt, Evaluation::value(b));
     }
 
@@ -83,7 +83,7 @@ std::pair<std::optional<Move>, Value> searchAlphaBeta(
 
             Value value = searchAlphaBeta(
                 b,
-                opponent(mover),
+                nextPlayer(mover),
                 depthRemaining - 1,
                 alpha, beta,
                 useQuiescentSearch,
@@ -117,7 +117,7 @@ std::pair<std::optional<Move>, Value> searchAlphaBeta(
                 }
             }
 
-            Value value = searchAlphaBeta(b, opponent(mover),
+            Value value = searchAlphaBeta(b, nextPlayer(mover),
                              depthRemaining - 1,
                              alpha, beta,
                              useQuiescentSearch,
