@@ -19,6 +19,7 @@
 #include <time.h>
 
 #include <iostream>
+#include <map>
 #include <memory>
 
 #include <QObject>
@@ -50,7 +51,8 @@ public:
     const std::string playerName(Color c) const;
 
     const std::string game_summary_string() const;
-    const std::string pgn_string() const;
+    void load_pgn(const std::string& pgn);
+    const std::string game_pgn_string() const;
 
     Board<V> board;
     GameOutcome outcome;
@@ -58,7 +60,7 @@ public:
     std::shared_ptr<Player> player2;
 
 public slots:
-    void receiveActionFromPlayer(Color mover, PlayerAction& action);
+    void receiveActionFromPlayer(Color mover, PlayerAction action);
 
 signals:
     // Boardcast to Players
@@ -76,6 +78,7 @@ signals:
 
 private:
     void _announceGameEnd(const GameOutcome &outcome) const;
+    void _pgn_tag_parse(const std::string& line);
     void _printGameStats() const;
 
     // ---------- Private write methods
@@ -89,6 +92,8 @@ private:
 
     std::string _date;
     std::string _time;
+
+    std::map<std::string, std::string> _otherTags;
 };
 
 }  // namespace hexchess::core
