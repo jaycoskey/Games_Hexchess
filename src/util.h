@@ -43,7 +43,7 @@ public:
 ///
 /// If needed, templatize further w/ collections: enable_if<has_const_iterator>...
 template <typename T>
-inline const T& chooseRandom(const std::vector<T>& collection) {
+inline T chooseRandom(const std::vector<T>& collection) {
     static std::random_device dev{"/dev/random"};
     static std::mt19937 prng(dev());
 
