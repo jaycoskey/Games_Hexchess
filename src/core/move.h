@@ -102,7 +102,6 @@ public:
     bool isCapture() const    { return _optCaptured != std::nullopt; }
     bool isCastling() const   { return _moveEnum == MoveEnum::Castling; }
 
-    // TODO: Implement setting of isCheck
     /// Note: Check and Checkmate are exclusive of each other. Checkmate is not a type of Check.
     bool isCheck() const;
     bool isCheckmate() const;
@@ -112,7 +111,7 @@ public:
     bool isProgressMove() const;
     bool isPromotion() const { return _moveEnum == MoveEnum::PawnPromotion; }
 
-    const std::string move_lan_string() const;
+    const std::string move_pgn_string(bool doChecks=true) const;
 
 private:
     Color _mover;                 ///< \brief The player moving
@@ -122,7 +121,7 @@ private:
     MoveEnum _moveEnum;           ///< \brief The move type, to simplify Undo
     OptPieceType _optCaptured;    ///< \brief The captured piece type (for Undo)
     OptPieceType _optPromotedTo;  ///< \brief The chosen promotion type
-    OptCheckEnum _optCheckEnum;   ///< \brief The Check type: Unknown/NoCheck/Check/Checkmate
+    OptCheckEnum _optCheckEnum;   ///< \brief The Check type: Check/Checkmate
 
 friend bool operator==(const Move& a, const Move& b);
 };

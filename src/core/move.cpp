@@ -48,6 +48,7 @@ Move& Move::operator=(const Move& other) {
     return *this;
 }
 
+// Returns false if it has not been determined
 bool Move::isCheck() const {
     assert(_optCheckEnum.has_value());
     return _optCheckEnum.value() == CheckEnum::Check;
@@ -62,23 +63,36 @@ bool Move::isProgressMove() const {
     return _pieceType == PieceType::Pawn || _optCaptured != std::nullopt;
 }
 
-const std::string Move::move_lan_string() const {
-    std::string result{};
+// Note: The platform only sets _optCheckEnum after a call to moveExec.
+//       Only then should this be called with doChecks=true.
+const std::string Move::move_pgn_string(bool doChecks) const {
+    assert (_from >= 0 && _from < Glinski::CELL_COUNT);
+    std::ostringstream oss;
 
     if (_moveEnum == MoveEnum::Castling) {
         // TODO: Loop over castlings. On a match, add code & break
     } else {
-        result += piece_type_string(_pieceType)
-                  + Glinski::cellName(_from)
-                  + (isCapture() ? "x" : "-")
-                  + Glinski::cellName(_to);
+        oss << piece_type_string(_pieceType);
+        oss << Glinski::cellName(_from);
+        oss << (isCapture()
+                   ? "x"
+                   //  (string("x(")
+                   //     + piece_type_string(_optCaptured.value())
+                   //     + ")")
+                   : "-");
+        oss << Glinski::cellName(_to);
     }
-    if (isEnPassant()) { result += "ep"; }
-    if (isPromotion()) { result += string{'='} + piece_type_string(_optPromotedTo.value()); }
-
-    if (isCheck()) { result += "+"; }
-    if (isCheckmate()) { result += "#"; }
-    return result;
+    if (isEnPassant()) {
+        oss << "ep";
+    }
+    if (isPromotion()) {
+        oss << '=' << piece_type_string(_optPromotedTo.value());
+    }
+    if (doChecks) {
+        if (isCheck()) { oss << "+"; }
+        if (isCheckmate()) { oss << "#"; }
+    }
+    return oss.str();
 }
 
 bool operator==(const Move& a, const Move& b) {
@@ -94,7 +108,7 @@ bool operator==(const Move& a, const Move& b) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Move& move) {
-    os << move.move_lan_string();
+    os << move.move_pgn_string();
     return os;
 }
 
