@@ -94,17 +94,17 @@ bool Glinski::isOnBoard(HexCoord hex0, HexCoord hex1) {
 }
 
 const Strings Glinski::cellNames {
-                       "A1", "B1", "C1", "D1", "E1", "F1",
-                    "A2", "B2", "C2", "D2", "E2", "F2", "G2",
-                 "A3", "B3", "C3", "D3", "E3", "F3", "G3", "H3",
-              "A4", "B4", "C4", "D4", "E4", "F4", "G4", "H4", "I4",
-           "A5", "B5", "C5", "D5", "E5", "F5", "G5", "H5", "I5", "K5",
-        "A6", "B6", "C6", "D6", "E6", "F6", "G6", "H6", "I6", "K6", "L6",
-           "B7", "C7", "D7", "E7", "F7", "G7", "H7", "I7", "K7", "L7",
-              "C8", "D8", "E8", "F8", "G8", "H8", "I8", "K8", "L8",
-                 "D9", "E9", "F9", "G9", "H9", "I9", "K9", "L9",
-                    "E10","F10","G10","H10","I10","K10","L10",
-                       "F11","G11","H11","I11","K11","L11"
+                   "A1", "B1", "C1", "D1", "E1", "F1",
+                "A2", "B2", "C2", "D2", "E2", "F2", "G1",
+             "A3", "B3", "C3", "D3", "E3", "F3", "G2", "H1",
+          "A4", "B4", "C4", "D4", "E4", "F4", "G3", "H2", "I1",
+       "A5", "B5", "C5", "D5", "E5", "F5", "G4", "H3", "I2", "K1",
+    "A6", "B6", "C6", "D6", "E6", "F6", "G5", "H4", "I3", "K2", "L1",
+       "B7", "C7", "D7", "E7", "F7", "G6", "H5", "I4", "K3", "L2",
+          "C8", "D8", "E8", "F8", "G7", "H6", "I5", "K4", "L3",
+             "D9", "E9", "F9", "G8", "H7", "I6", "K5", "L4",
+                "E10","F10","G9", "H8", "I7", "K6", "L5",
+                   "F11","G10","H9", "I8", "K7", "L6"
 };
 
 const string& Glinski::cellName(Index index) {
@@ -211,10 +211,6 @@ const vector<HexRays<Glinski>> Glinski::queenRays { []()
         vector<HexRays<Glinski>> result;
         for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
             HexRays<Glinski> rays = getSlideRays(index, Glinski::queenSlideDirs);
-            // TODO: Complete work in progress. Reported size is too small
-            // for (const HexRay<Glinski>& ray : rays) {
-            //     cout << "Adding Queen ray with size " << ray.size() << "\n";
-            // }
             result.push_back(getSlideRays(index, Glinski::queenSlideDirs));
         }
         return result;
