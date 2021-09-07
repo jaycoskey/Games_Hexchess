@@ -35,11 +35,13 @@ using core::Value;
 using core::negInfinity;
 using core::posInfinity;
 
+/// Glinski: Q:10, R:5, B:3, N:4
+/// Roczniak: Q6.660, R:4.460, B:2.6, N:2.3
 const map<PieceType, Value> Evaluation::_pieceTypeToValue {
-    {PieceType::Queen, 9},
-    {PieceType::Rook, 5.5},
-    {PieceType::Bishop, 3.33},
-    {PieceType::Knight, 3.05}
+    {PieceType::Queen,  6'660},
+    {PieceType::Rook,   4'460},
+    {PieceType::Bishop, 2'600},
+    {PieceType::Knight, 2'300}
 };
 
 Value Evaluation::value_pieceTypes(const Board<Glinski>& b, Color c) {
