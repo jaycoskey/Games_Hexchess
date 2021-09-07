@@ -18,6 +18,7 @@
 #include <string>
 
 #include <QObject>
+#include <Qt>
 
 #include "board.h"
 #include "fen.h"
@@ -68,7 +69,7 @@ public slots:
     // TODO: Receive "superuser" board edits: addPiece, movePiece, removePiece
 
 signals:
-    void sendActionToServer(Color mover, PlayerAction& action);
+    void sendActionToServer(Color mover, PlayerAction action, Qt::ConnectionType ct);
     // TODO: Send DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Send "superuser" board edits: addPiece, movePiece, removePiece
 };
@@ -104,9 +105,11 @@ void connectSignalsToSlots(const GAME& game, P1 *p1, P2 *p2) {
 
     // Sent from player to server
     QObject::connect(p1,    &P1::sendActionToServer,
-                     &game, &GAME::receiveActionFromPlayer);
+                     &game, &GAME::receiveActionFromPlayer,
+                     Qt::QueuedConnection);
     QObject::connect(p2,    &P2::sendActionToServer,
-                     &game, &GAME::receiveActionFromPlayer);
+                     &game, &GAME::receiveActionFromPlayer,
+                     Qt::QueuedConnection);
 }
 
 }  // namespace hexchess::player
