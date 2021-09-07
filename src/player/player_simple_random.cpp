@@ -17,9 +17,6 @@
 
 #include <iostream>
 
-#include <QMetaObject>
-#include <Qt>
-
 #include "board.h"
 #include "fen.h"
 #include "player.h"
