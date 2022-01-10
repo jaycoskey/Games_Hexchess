@@ -15,11 +15,15 @@
 
 #pragma once
 
+#include <cassert>
+
 #include <optional>
 #include <sstream>
 
 #include "util.h"
 #include "util_hexchess.h"
+#include "variant.h"
+#include "zobrist.h"
 
 
 namespace hexchess::core {
@@ -34,6 +38,7 @@ using OptMoves = std::optional<Moves>;
 
 using OptPieceType = std::optional<PieceType>;
 
+using MHash = ZHash;
 
 /// \brief The different types of Check that a Move can have.
 ///
@@ -59,6 +64,8 @@ enum class MoveEnum {
     EnPassant,  // EnPassant = the capture move, not the Pawn double-advance
     PawnPromotion
 };
+const std::string move_enum_string(MoveEnum me);
+std::ostream& operator<<(std::ostream& os, MoveEnum me);
 
 /// \brief The record of a player Move.
 ///
@@ -82,7 +89,11 @@ public:
           _optCaptured{optCaptured},
           _optPromotedTo{optPromotedTo},
           _optCheckEnum{optCheckEnum}
-    { }
+    {
+        assert(from != to);
+        assert(from >= 0 && from <= Glinski::CELL_COUNT);
+        assert(to >= 0 && to <= Glinski::CELL_COUNT);
+    }
 
     Move(const Move& other) = default;
     ~Move() {};
@@ -97,7 +108,10 @@ public:
     const OptPieceType optCaptured()   const { return _optCaptured; };
     const OptPieceType optPromotedTo() const { return _optPromotedTo; };
 
+    OptCheckEnum optCheckEnum() const { return _optCheckEnum; }
     bool hasCheckEnum() const { return _optCheckEnum.has_value(); }
+    CheckEnum checkEnum() const { return _optCheckEnum.value(); }
+    void setCheckEnum(CheckEnum ce) { _optCheckEnum = std::make_optional(ce); }
 
     bool isCapture() const    { return _optCaptured != std::nullopt; }
     bool isCastling() const   { return _moveEnum == MoveEnum::Castling; }
@@ -112,8 +126,11 @@ public:
     bool isPromotion() const { return _moveEnum == MoveEnum::PawnPromotion; }
 
     const std::string move_pgn_string(bool doChecks=true) const;
+    MHash getHash() const;
 
 private:
+    // class Board;
+    // const Board *_board;       ///< \brief Contains _mhashToCheckEnum
     Color _mover;                 ///< \brief The player moving
     PieceType _pieceType;         ///< \brief On castling, pieceType == PieceType::King
     Index _from;                  ///< \brief The beginning position
@@ -121,7 +138,7 @@ private:
     MoveEnum _moveEnum;           ///< \brief The move type, to simplify Undo
     OptPieceType _optCaptured;    ///< \brief The captured piece type (for Undo)
     OptPieceType _optPromotedTo;  ///< \brief The chosen promotion type
-    OptCheckEnum _optCheckEnum;   ///< \brief The Check type: Check/Checkmate
+    mutable OptCheckEnum _optCheckEnum;  ///< \brief Duplicate of map value in Board
 
 friend bool operator==(const Move& a, const Move& b);
 };
