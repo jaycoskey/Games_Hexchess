@@ -81,11 +81,7 @@ void Board<Glinski>::setPiece(Index index, Color c, PieceType pt, bool value) {
 }
 
 template<>
-void Board<Glinski>::addPiece(Index index, Color c, PieceType pt, bool verbose) {
-    if (verbose) {
-        cout << "Adding " << piece_string(c, pt)
-             << " @ " << V::cellNames[index] << "\n";
-    }
+void Board<Glinski>::addPiece(Index index, Color c, PieceType pt) {
     setPiece(index, c, pt, true);
 }
 
@@ -107,12 +103,23 @@ void Board<Glinski>::changePieceType(Index index, Color c, PieceType ptOld, Piec
 }
 
 template<>
+HalfMoveCounter Board<Glinski>::currentCounter() const {
+    return _currentCounter;
+}
+
+template<>
 void Board<Glinski>::initialize(const Fen<Glinski>& fen) {
+    Scope scope("Board::initialize", true);
+    print(std::cout, scope(), "Board=", name(), ", counter=", currentCounter(),
+        ". Fen=", fen.fen_string(), "\n");
     // (1) Piece placement
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
         if (fen.piecesSparse[index].has_value()) {
             auto [c, pt] = fen.piecesSparse[index].value();
             addPiece(index, c, pt);
+            if (pt == PieceType::King) {
+                setKingIndex(index, c);
+            }
         }
     }
     // (2) Mover
@@ -134,25 +141,28 @@ void Board<Glinski>::initialize(const Fen<Glinski>& fen) {
 /// For an empty board:                     Board(bool doPopulate=false)
 /// For a board with custom setup, use Board(const Fen<V> initial setup: Board()
 template<>
-Board<Glinski>::Board(bool doPopulate)
-  : _anyPieceBits{},
-    _colorToAnyPieceBits { { Color::Black, {}}, {Color::White, {}} },
-    _colorToKingBits     { { Color::Black, {}}, {Color::White, {}} },
-    _colorToQueenBits    { { Color::Black, {}}, {Color::White, {}} },
-    _colorToRookBits     { { Color::Black, {}}, {Color::White, {}} },
-    _colorToBishopBits   { { Color::Black, {}}, {Color::White, {}} },
-    _colorToKnightBits   { { Color::Black, {}}, {Color::White, {}} },
-    _colorToPawnBits     { { Color::Black, {}}, {Color::White, {}} },
-
-    _colorToKingIndex    { { Color::Black, -1}, {Color::White, -1} },
-
-    _mover{Color::White},
-    // \todo: Implement castling
-    // _colorToRookCastlingAvailabilityBits
-    //                     { { Color::Black, {}}, {Color::White, {}} },
-
-    _optEpIndex{std::nullopt}
+Board<Glinski>::Board(const string& name, bool doPopulate)
+    : _name{name}
 {
+    _anyPieceBits = V::Bits{};
+    _colorToAnyPieceBits = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+    _colorToKingBits     = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+    _colorToQueenBits    = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+    _colorToRookBits     = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+    _colorToBishopBits   = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+    _colorToKnightBits   = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+    _colorToPawnBits     = map<Color, typename V::Bits> {
+        { Color::Black, {}}, {Color::White, {}} };
+
+    _colorToKingIndex    = map<Color, Index> { { Color::Black, 12345}, {Color::White, 12345} };
+    _optEpIndex          = std::nullopt;
+
     if (doPopulate) {
         Fen<V> fenInitial{Glinski::fenInitial};
         initialize(fenInitial);
@@ -161,8 +171,8 @@ Board<Glinski>::Board(bool doPopulate)
 
 /// \brief Constructs Board from Fen instance (derived from FEN string)
 template<>
-Board<Glinski>::Board(const Fen<V>& fen)
-    : Board<Glinski>::Board(false)
+Board<Glinski>::Board(const string& name, const Fen<V>& fen)
+    : Board<Glinski>::Board(name, false)
 {
     // Part (1) of FEN string: Piece placements
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
@@ -175,11 +185,7 @@ Board<Glinski>::Board(const Fen<V>& fen)
             // assert(getPieceTypeAt(index, c) == pt);
 
             if (pt == PieceType::King) {
-                if (c == Color::Black) {
-                    _colorToKingIndex[Color::Black] = index;
-                } else {
-                    _colorToKingIndex[Color::White] = index;
-                }
+                setKingIndex(index, c);
             }
         }
     }
@@ -203,8 +209,8 @@ Board<Glinski>::Board(const Fen<V>& fen)
 
 /// \brief Constructs Board from FEN string by delegating to constructor using Fen instance
 template<>
-Board<Glinski>::Board(const string& fenStr)
-    : Board<Glinski>::Board{Fen<V>{fenStr}}
+Board<Glinski>::Board(const string& name, const string& fenStr)
+    : Board<Glinski>::Board{name, Fen<V>{fenStr}}
 { /* TODO */ }
 
 // ========================================
@@ -239,11 +245,6 @@ void Board<Glinski>::reset(bool doPopulate) {
 // ========================================
 // Non-piece data
 
-template<>
-HalfMoveCounter Board<Glinski>::currentCounter() const {
-    return _currentCounter;
-}
-
 // ========================================
 // Write piece data
 // (See header)
@@ -269,16 +270,63 @@ HalfMoveCounter Board<Glinski>::currentCounter() const {
 
 template<>
 Color Board<Glinski>::getColorAt(Index index) const {
-    assert(anyPieceBits().test(index));
+    if (!anyPieceBits().test(index)) {
+        ostringstream oss;
+        oss << "Board::getColorAt: No piece at " << index;
+        string msg = oss.str();
+        throw std::logic_error{msg};
+    }
     return anyPieceBits(Color::Black).test(index)
         ? Color::Black
         : Color::White;
 }
 
-// Adding one more level to the decision tree (e.g., testing non-Pawns for isBN) doesn't pay off.
+template<>
+const string Board<Glinski>::board_bits_string() const {
+    ostringstream oss;
+
+    // Header with numbered columns
+    oss << "######### : ";
+    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+        if (index % 10 == 0) {
+            oss << index / 10;
+        } else {
+            oss << " ";
+        }
+    }
+    oss << "\n";
+    oss << "######### : ";
+    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+        oss << index % 10;
+    }
+    oss << "\n";
+
+    oss << "Any Piece : " << reved(_anyPieceBits.to_string())  << "\n";
+    oss << "    Black:\n";
+    oss << "\tA:  " << reved(_colorToAnyPieceBits.at(Color::Black).to_string()) << "\n";
+    oss << "\tK:  " << reved(_colorToKingBits.at(Color::Black).to_string())     << "\n";
+    oss << "\tQ:  " << reved(_colorToQueenBits.at(Color::Black).to_string())    << "\n";
+    oss << "\tR:  " << reved(_colorToRookBits.at(Color::Black).to_string())     << "\n";
+    oss << "\tB:  " << reved(_colorToBishopBits.at(Color::Black).to_string())   << "\n";
+    oss << "\tN:  " << reved(_colorToKnightBits.at(Color::Black).to_string())   << "\n";
+    oss << "\tP:  " << reved(_colorToPawnBits.at(Color::Black).to_string())     << "\n";
+    oss << "    White:\n";
+    oss << "\tA:  " << reved(_colorToAnyPieceBits.at(Color::White).to_string()) << "\n";
+    oss << "\tK:  " << reved(_colorToKingBits.at(Color::White).to_string())     << "\n";
+    oss << "\tQ:  " << reved(_colorToQueenBits.at(Color::White).to_string())    << "\n";
+    oss << "\tR:  " << reved(_colorToRookBits.at(Color::White).to_string())     << "\n";
+    oss << "\tB:  " << reved(_colorToBishopBits.at(Color::White).to_string())   << "\n";
+    oss << "\tN:  " << reved(_colorToKnightBits.at(Color::White).to_string())   << "\n";
+    oss << "\tP:  " << reved(_colorToPawnBits.at(Color::White).to_string())     << "\n";
+
+    return oss.str();
+}
+
 template<>
 PieceType Board<Glinski>::getPieceTypeAt(Index index, Color c) const {
-    assert(anyPieceBits().test(index));
+    if (!anyPieceBits().test(index)) {
+        print(cout, "Board=", name(), ", counter=", currentCounter(), ": ", board_bits_string());
+    }
     assert(anyPieceBits(c).test(index));
 
     if (pawnBits(c).test(index)) {
@@ -293,7 +341,8 @@ PieceType Board<Glinski>::getPieceTypeAt(Index index, Color c) const {
         return PieceType::Queen;
     } else /* King */ {
         if (!kingBits(c).test(index)) {
-            throw std::logic_error("Inconsistent board information on cell #" + std::to_string(index));
+            throw std::logic_error("Inconsistent board information on cell #"
+                + std::to_string(index));
         }
         return PieceType::King;
     }
@@ -380,32 +429,7 @@ bool Board<Glinski>::isRepetition() const {
 // String methods
 
 template<>
-const string Board<Glinski>::board_bits_string() /* const */ {
-    ostringstream oss;
-
-    oss << "Any Piece : " << reved(_anyPieceBits.to_string())  << "\n";
-    oss << "    Black:\n";
-    oss << "\tA:  " << reved(_colorToAnyPieceBits[Color::Black].to_string()) << "\n";
-    oss << "\tK:  " << reved(_colorToKingBits[Color::Black].to_string())     << "\n";
-    oss << "\tQ:  " << reved(_colorToQueenBits[Color::Black].to_string())    << "\n";
-    oss << "\tR:  " << reved(_colorToRookBits[Color::Black].to_string())     << "\n";
-    oss << "\tB:  " << reved(_colorToBishopBits[Color::Black].to_string())   << "\n";
-    oss << "\tN:  " << reved(_colorToKnightBits[Color::Black].to_string())   << "\n";
-    oss << "\tP:  " << reved(_colorToPawnBits[Color::Black].to_string())     << "\n";
-    oss << "    White:\n";
-    oss << "\tA:  " << reved(_colorToAnyPieceBits[Color::White].to_string()) << "\n";
-    oss << "\tK:  " << reved(_colorToKingBits[Color::White].to_string())     << "\n";
-    oss << "\tQ:  " << reved(_colorToQueenBits[Color::White].to_string())    << "\n";
-    oss << "\tR:  " << reved(_colorToRookBits[Color::White].to_string())     << "\n";
-    oss << "\tB:  " << reved(_colorToBishopBits[Color::White].to_string())   << "\n";
-    oss << "\tN:  " << reved(_colorToKnightBits[Color::White].to_string())   << "\n";
-    oss << "\tP:  " << reved(_colorToPawnBits[Color::White].to_string())     << "\n";
-
-    return oss.str();
-}
-
-template<>
-const string Board<Glinski>::board_string() {
+const string Board<Glinski>::board_string() const {
     ostringstream oss;
     int rowNum = 0;
     int cellsRemainingInRow = Glinski::fenRowLengths[rowNum];
@@ -427,11 +451,11 @@ const string Board<Glinski>::board_string() {
     oss << std::setw(indent(0)) << " ";
     for (Index index : Glinski::fenOrderToIndex) {
         if (isEmpty(index)) {
-            oss << "--  ";
+            oss << "  --";
         } else {
             Color c = getColorAt(index);
             PieceType pt = getPieceTypeAt(index, c);
-            oss << piece_string(c, pt) << "  ";
+            oss << "  " << piece_string(c, pt);
         }
         cellsRemainingInRow--;
 
@@ -476,25 +500,97 @@ const string Board<Glinski>::moves_pgn_string() const {
     return oss.str();
 }
 
+template<>
+void Board<Glinski>::_bitsConsistencyTest() const {
+    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
+        Short pieceFoundCount = 0;
+        for (Color c : {Color::Black, Color::White}) {
+            Short thisColorPieceFoundCount = 0;
+            if (_colorToKingBits.at(c).test(index)) {
+                thisColorPieceFoundCount++;
+            }
+            if (_colorToQueenBits.at(c).test(index)) {
+                thisColorPieceFoundCount++;
+            }
+            if (_colorToRookBits.at(c).test(index)) {
+                thisColorPieceFoundCount++;
+            }
+            if (_colorToBishopBits.at(c).test(index)) {
+                thisColorPieceFoundCount++;
+            }
+            if (_colorToKnightBits.at(c).test(index)) {
+                thisColorPieceFoundCount++;
+            }
+            if (_colorToPawnBits.at(c).test(index)) {
+                thisColorPieceFoundCount++;
+            }
+
+            assert(thisColorPieceFoundCount <= 1);
+            if (thisColorPieceFoundCount > 0) {
+                assert(_colorToAnyPieceBits.at(c).test(index));
+            }
+            pieceFoundCount += thisColorPieceFoundCount;
+        }
+        assert(pieceFoundCount <= 1);
+        if (pieceFoundCount > 0) {
+            assert(_anyPieceBits.test(index));
+        }
+    }
+}
+
+template<>
+void Board<Glinski>::_bitsMove(map<Color, typename Glinski::Bits>& bits,
+    Color mover, Index from, Index to)
+{
+    bits[mover].reset(from);
+    bits[mover].set(to);
+}
+
+template<>
+void Board<Glinski>::_bitsMove(typename Glinski::Bits& bits,
+    Index from, Index to)
+{
+    bits.reset(from);
+    bits.set(to);
+}
+
+template<>
+void Board<Glinski>::_bitsReset(Index index, Color c, PieceType pt) {
+    assert(getColorAt(index) == c);
+    _anyPieceBits.reset(index);
+    _colorToAnyPieceBits[c].reset(index);
+    _colorToKingBits[c].reset(index);
+    _colorToQueenBits[c].reset(index);
+    _colorToRookBits[c].reset(index);
+    _colorToBishopBits[c].reset(index);
+    _colorToKnightBits[c].reset(index);
+    _colorToPawnBits[c].reset(index);
+}
+
 // ========================================
-// Finding, getting, and caching moves
+// Finding pseudo-legal moves
 
 template<>
 void Board<Glinski>::recordObstructedHexRayCore(
-    Index obsIndex, Index rayStart, const HexDir& rayDir) const
+    Index obsIndex, Index rayStart, const HexDir& rayDir) cache_const
 {
+    Scope scope{"Board::recordObstructedHexRayCore"};
+    // print(cout, scope(), "Previously cached obstructions: ", _cache.obstructedHexRayMap.size(), "\n");
+    // print(cout, scope(), "Adding obstruction @ ", obsIndex, " for ray start=", rayStart, ", dir=", rayDir, "\n");
     assert(rayDir.hex0 != 0 || rayDir.hex1 != 0);
     if (!_cache.obstructedHexRayMap.contains(obsIndex)) {
         _cache.obstructedHexRayMap[obsIndex] = HexRayCores{};
     }
-    _cache.obstructedHexRayMap[obsIndex].push_back(mkPair(rayStart, rayDir));
+    auto hexRayCore = mkPair(rayStart, rayDir);
+    _cache.obstructedHexRayMap[obsIndex].push_back(hexRayCore);
 }
 
 template<>
-const HexRayCores Board<Glinski>::getObstructedHexRayCores(Index obsIndex) const {
+const HexRayCores Board<Glinski>::getObstructedHexRayCores(Index obsIndex) cache_const {
     if (_cache.obstructedHexRayMap.contains(obsIndex)) {
         return _cache.obstructedHexRayMap.at(obsIndex);
     } else {
+        // TODO
         return HexRayCores{};
     }
 }
@@ -525,7 +621,8 @@ void Board<Glinski>::findSlideMoves(
     Index from,
     Color mover,
     PieceType pt,
-    const HexRays<Glinski>& rays
+    const HexRays<Glinski>& rays,
+    bool isVirtual
     ) const
 {
     for (const HexRay<V>& ray : rays) {
@@ -533,11 +630,15 @@ void Board<Glinski>::findSlideMoves(
         Color obstructionColor = Color::Black;
 
         for (Index dest : ray.indices()) {
-            if (isPieceAt(dest)) {
-                recordObstructedHexRayCore(dest, ray.start(), ray.dir());
+            if (isPieceAt(dest)
+                && V::isOnBoard(V::indexToPos(dest)))
+            {
+                foundObstruction = true;
+                if (!isVirtual) {
+                    recordObstructedHexRayCore(dest, ray.start(), ray.dir());
+                }
                 Color destColor = getColorAt(dest);
                 if (destColor == mover) {
-                    foundObstruction = true;
                     obstructionColor = destColor;
                     break;
                 }
@@ -553,12 +654,13 @@ void Board<Glinski>::findSlideMoves(
                     };
                 moves.push_back(move);
             }
-            if (foundObstruction && obstructionColor == mover) {
+            if (foundObstruction) {
                 break;
             }
         }
     }
 }
+
 /// \brief Find available (non-en-passant) Pawn moves. For Pawn promotion scenarios,
 ///        create multiple moves, one for each Pawn promotion type.
 ///
@@ -645,21 +747,25 @@ void Board<Glinski>::findStandardPawnMoves(
 
 template<>
 void Board<Glinski>::findPseudoLegalMoves(/* out */ Moves& moves,
-    Index from, Color mover, PieceType pt
+    Index from, Color mover, PieceType pt, bool isVirtual
     ) const
 {
+    bool debug{false};
+    if (debug && !isVirtual) {
+        assert(getPieceTypeAt(from, mover) == pt);
+    }
     switch (pt) {
     case PieceType::King:
         findLeapMoves(moves, from, mover, pt, V::kingDests.at(from));
         break;
     case PieceType::Queen:
-        findSlideMoves(moves, from, mover, pt, V::queenRays.at(from));
+        findSlideMoves(moves, from, mover, pt, V::queenRays.at(from), isVirtual);
         break;
     case PieceType::Rook:
-        findSlideMoves(moves, from, mover, pt, V::rookRays.at(from));
+        findSlideMoves(moves, from, mover, pt, V::rookRays.at(from), isVirtual);
         break;
     case PieceType::Bishop:
-        findSlideMoves(moves, from, mover, pt, V::bishopRays.at(from));
+        findSlideMoves(moves, from, mover, pt, V::bishopRays.at(from), isVirtual);
         break;
     case PieceType::Knight:
         findLeapMoves(moves, from, mover, pt, V::knightDests.at(from));
@@ -668,7 +774,7 @@ void Board<Glinski>::findPseudoLegalMoves(/* out */ Moves& moves,
         findStandardPawnMoves(moves, from, mover);
         break;
     default:
-        throw std::logic_error("Board: pseudoLegalDestinations: Unrecognized PieceType");
+        throw std::logic_error("Board::pseudoLegalDestinations: Unrecognized PieceType");
     }
 }
 
@@ -680,12 +786,34 @@ void Board<Glinski>::findPseudoLegalMoves(/* out */ Moves& moves, Color mover) c
 }
 
 template<>
-void Board<Glinski>::recordPseudoLegalMoves(const Moves& moves) const {
+bool Board<Glinski>::_moveSanityCheck(const Move& move) const {
+    assert(move.from() >= 0 && move.from() < Glinski::CELL_COUNT);
+    assert(move.to() >= 0 && move.to() < Glinski::CELL_COUNT);
+    assert(move.from() != move.to());
+    assert(getPieceTypeAt(move.from(), move.mover()) == move.pieceType());
+
+    if (move.isCapture()) {
+        assert(isPieceAt(move.to(), opponent(move.mover())));
+    } else {
+        assert(!isPieceAt(move.to()));
+    }
+    return true;
+}
+
+template<>
+void Board<Glinski>::recordPseudoLegalMoves(const Moves& moves) cache_const {
+    bool debug{true};
+
+    if (debug) {
+        for (const Move& move : moves) {
+            assert(_moveSanityCheck(move));
+        }
+    }
     _cache.optPseudoLegalMoves = std::make_optional<Moves>(moves);
 };
 
 template<>
-Moves Board<Glinski>::getPseudoLegalMoves(Color mover) const {
+Moves Board<Glinski>::getPseudoLegalMoves(Color mover) cache_const {
     if (_cache.optPseudoLegalMoves.has_value()) {
         return _cache.optPseudoLegalMoves.value();
     } else {
@@ -696,29 +824,45 @@ Moves Board<Glinski>::getPseudoLegalMoves(Color mover) const {
     }
 }
 
-// ----------------------------------------
+// ========================================
+// Legal moves
 
 /// \brief Returns true iff a player moving a piece from \p from to \p to
 ///        would cause put that same player's King in check.
 ///
+/// Tactic: Re-use information about piece move capabilities already cached.
+///
 /// The only types of moves that can put the moving player into (self-)check is
 ///   one that removes an obstruction from an opponent's sliding piece.
+/// \todo Support scenario in which e.p. capture exposes King to attack by slider.
 template<>
-bool Board<Glinski>::isOwnKingAttackedAfterOwnMove(Color mover, Index from, Index to) const
+bool Board<Glinski>::_isKingAttackedAfterMove(const Move& move, Color kColor) cache_const
 {
-    (void) to;  // Could check whether piece has moved out from the path between obstruction & King
-    Index kIndex = getKingIndex(mover);
+    Scope scope{"Board::_isKingAttackedAfterMove"};
+    // If the King in question has moved, cached info is not helpful
+    assert(move.pieceType() != PieceType::King || move.mover() != kColor);
+
+    Index from = move.from();
+    Index to = move.to();
+    Color mover  = move.mover();
+    PieceType moverType  = move.pieceType();
+    Index kIndex = getKingIndex(kColor);
+    assert(kIndex >= 0 && kIndex < V::CELL_COUNT);
+
     const HexRayCores obstructed = getObstructedHexRayCores(from);
-    if (obstructed.size() == 0) {
-        return false;
-    }
     for (const auto& [obsStart, obsDir] : obstructed) {
-        if (obsStart == from) {
-            // The piece moved was a slider obstruction.
+        // print(cout, scope(),
+        //     "[obsStart=", obsStart, " obsDir=", obsDir,
+        //     ", move=", move.move_pgn_string(false), "] ",
+        //     "Testing obstructed Ray\n");
+        assert(obsStart != from);  // A piece doesn't obstruct itself.
+        if (getColorAt(obsStart) == opponent(kColor)) {
+            // The piece moved was an obstruction of the opponent's slider
             HexDir obsToKingDir = (V::indexToPos(kIndex) - V::indexToPos(obsStart));
             Short collinearTestValue = obsDir.hex0 * obsToKingDir.hex1
                                      - obsDir.hex1 * obsToKingDir.hex0;
             if (collinearTestValue == 0) {
+
                 // They're collinear, so this Ray might now attack the King. Re-trace it.
                 for (HexPos cursor = V::indexToPos(obsStart) + obsDir;
                     V::isOnBoard(cursor);
@@ -729,49 +873,55 @@ bool Board<Glinski>::isOwnKingAttackedAfterOwnMove(Color mover, Index from, Inde
                         return true;
                     }
                     if (curIndex == to || isPieceAt(curIndex)) {
-                        return false;
+                        return false;  // Obstructed
                     }
                 }
             }
         }
     }
-    return false;
-}
+    if (mover == kColor) {
+        // Moving piece is the same color as the King, so it cannot attack
+        return false;
+    }
 
-template<>
-void Board<Glinski>::findLegalMoves(/* out */ Moves& legalMoves,
-    Color c, const Moves& pseudoLegalMoves) const
-{
-    for (const Move& move : pseudoLegalMoves) {
-        if (!isOwnKingAttackedAfterOwnMove(c, move.from(), move.to())) {
-            legalMoves.push_back(move);
+    // Does moving piece attack King from new position?
+    if (moverType == PieceType::Pawn) {
+        if (V::pawnCaptureBits(to, mover).test(kIndex)) {
+            return true;
+        } else if (!V::pawnPromotionBits(mover).test(to)) {
+            return false;
+        }
+        moverType = move.optPromotedTo().value();
+    }
+    if (isLeaper(moverType)) {
+        switch(moverType) {
+        case PieceType::King:
+            // TODO: Convert kingDests to use std::set?
+            for (Index dest : V::kingDests.at(to)) {
+                if (dest == kIndex) {
+                    return true;  // Note: Shouldn't happen
+                }
+            }
+            return false;
+        case PieceType::Knight:
+            // TODO: Convert kingDests to use std::set?
+            for (Index dest : V::kingDests.at(to)) {
+                if (dest == kIndex) {
+                    return true;  // Note: Shouldn't happen
+                }
+            }
+            return false;
+        default:
+            throw std::logic_error{"Board::_isKingAttackedAfterMove: Unrecognized piece type"};
         }
     }
-}
-
-template<>
-void Board<Glinski>::recordLegalMoves(const Moves& moves) const {
-    _cache.optLegalMoves = std::make_optional<Moves>(moves);
-};
-
-template<>
-Moves Board<Glinski>::getLegalMoves(Color c) const {
-    if (_cache.optLegalMoves.has_value()) {
-        return _cache.optLegalMoves.value();
-    } else {
-        Moves pseudoLegalMoves = getPseudoLegalMoves(c);
-        Moves result{};
-        findLegalMoves(result, c, pseudoLegalMoves);
-        recordPseudoLegalMoves(result);
-        return result;
-    }
-}
-
-/// \todo Refactor both signatures of piecesDense to remove code duplication.
-template<>
-bool Board<Glinski>::isAttacked(Index tgtIndex, Color tgtColor) const {
-    for (const Move& move : getLegalMoves(opponent(tgtColor))) {
-        if (move.to() == tgtIndex) {
+    assert(isSlider(moverType));
+    Moves pseudoLegalMoves{};
+    /// \todo Test individual rays instead of calling findPseudoLegalMoves
+    /// Note: No need to check legality for checks
+    findPseudoLegalMoves(pseudoLegalMoves, to, mover, moverType, true);
+    for (const Move& move : pseudoLegalMoves) {
+        if (move.to() == kIndex) {
             return true;
         }
     }
@@ -779,19 +929,83 @@ bool Board<Glinski>::isAttacked(Index tgtIndex, Color tgtColor) const {
 }
 
 template<>
+void Board<Glinski>::recordMoveCheckEnum(const Move& move, CheckEnum ce) cache_const {
+    MHash hash = move.getHash();
+    _cache.mhashToCheckEnum[hash] = ce;
+}
+
+template<>
+CheckEnum Board<Glinski>::getMoveCheckEnum(const Move& move) cache_const {
+    MHash hash = move.getHash();
+    if (_cache.mhashToCheckEnum.contains(hash)) {
+        return _cache.mhashToCheckEnum.at(hash);
+    }
+    CheckEnum result = _isKingAttackedAfterMove(move, opponent(move.mover()))
+                            ? CheckEnum::Check
+                            : CheckEnum::None;
+    _cache.mhashToCheckEnum[hash] = result;
+    return result;
+}
+
+template<>
+void Board<Glinski>::recordLegalMoves(const Moves& moves) cache_const {
+    bool debug{true};
+
+    if (debug) {
+        for (const Move& move : moves) {
+            assert(_moveSanityCheck(move));
+        }
+    }
+    _cache.optLegalMoves = std::make_optional<Moves>(moves);
+};
+
+// TODO: Also handle Checkmate
+template<>
+const Moves Board<Glinski>::getLegalMoves(Color c) const {
+    assert(c == mover());
+    if (_cache.optLegalMoves.has_value()) {
+        return _cache.optLegalMoves.value();
+    } else {
+        Moves pseudoLegalMoves = getPseudoLegalMoves(c);
+        Moves result{};
+        findLegalMoves(result, c, pseudoLegalMoves);
+        recordLegalMoves(result);
+        Short legalMoveCount = result.size();
+        return result;
+    }
+}
+
+/// \brief Returns highest level of Check encountered: None -> Check -> Checkmate
+///
+/// Note: This method calls Board::getMoveCheckEnum, which uses a cache
+template<>
+CheckEnum Board<Glinski>::setLegalMoveCheckEnums(Color mover) cache_const {
+    CheckEnum result = CheckEnum::None;
+
+    for (const Move& move : getLegalMoves(mover)) {
+        CheckEnum ce = getMoveCheckEnum(move);
+        if (ce == CheckEnum::Checkmate || (result == CheckEnum::None && ce == CheckEnum::Check)) {
+            result = ce;
+        }
+    }
+    return result;
+}
+
+// ========================================
+// Attacks
+
+template<>
 bool Board<Glinski>::isAttacking(Index from, Color, PieceType pt, Index tgt) const {
     throw NotImplementedException{"Board<>::isAttacking"};
 }
 
-// ----------------------------------------
-
 template<>
-void Board<Glinski>::recordCheckEnum(CheckEnum checkEnum) const {
+void Board<Glinski>::recordCheckEnum(CheckEnum checkEnum) cache_const {
     _cache.optCheckEnum = std::make_optional<CheckEnum>(checkEnum);
 };
 
 template<>
-CheckEnum Board<Glinski>::getCheckEnum() const {
+CheckEnum Board<Glinski>::getCheckEnum() cache_const {
     if (_cache.optCheckEnum.has_value()) {
         return _cache.optCheckEnum.value();
     }
@@ -807,7 +1021,7 @@ CheckEnum Board<Glinski>::getCheckEnum() const {
             return CheckEnum::None;
         }
     }
-    if (isAttacked(getKingIndex(mover()), mover())) {
+    if (isOwnCellAttacked(getKingIndex(mover()))) {
         recordCheckEnum(CheckEnum::Check);
         return CheckEnum::Check;
     }
@@ -815,10 +1029,13 @@ CheckEnum Board<Glinski>::getCheckEnum() const {
     return CheckEnum::None;
 }
 
-// ----------------------------------------
+template<>
+bool Board<Glinski>::isCheck() cache_const {
+    return getCheckEnum() == CheckEnum::Check;
+}
 
 template<>
-void Board<Glinski>::recordOutcome(const GameOutcome& gameOutcome) const {
+void Board<Glinski>::recordOutcome(const GameOutcome& gameOutcome) cache_const {
     _cache.optOutcome = std::make_optional<GameOutcome>(gameOutcome);
 };
 
@@ -826,18 +1043,19 @@ void Board<Glinski>::recordOutcome(const GameOutcome& gameOutcome) const {
 ///       It does not test for Resignation or Draw by agreement.
 ///       If a game ends via either of those condiions, then we should not reach here.
 template<>
-OptGameOutcome Board<Glinski>::getOptOutcome() const {
+GameOutcome Board<Glinski>::getOutcome() cache_const {
     // ---------- Has the Outcome already been cached? ----------
     if (_cache.optOutcome.has_value()) {
         return _cache.optOutcome.value();
     }
     // ---------- Checkmate or Stalemate ----------
     if (getLegalMoves(mover()).size() == 0) {
-        if (isAttacked(getKingIndex(mover()), mover())) {
+        if (isOwnCellAttacked(getKingIndex(mover()))) {
             GameOutcome outcome{Termination::Win_Checkmate, opponent(mover())};
             recordOutcome(outcome);
             return outcome;
         } else {
+            /// On Stalemate, Glinski chess awards the last mover 3/4 point.
             GameOutcome outcome{Termination::Draw_Stalemate, opponent(mover())};
             recordOutcome(outcome);
             return outcome;
@@ -861,7 +1079,7 @@ OptGameOutcome Board<Glinski>::getOptOutcome() const {
                 if (pt == PieceType::Bishop || pt == PieceType::Knight) {
                     GameOutcome outcome{Termination::Draw_InsufficientResources};
                     recordOutcome(outcome);
-                    return _cache.optOutcome;
+                    return outcome;
                 } else {
                     break;  // Not insufficient resources
                 }
@@ -881,114 +1099,61 @@ OptGameOutcome Board<Glinski>::getOptOutcome() const {
     if (_nonProgressCounter >= 50) {
         GameOutcome outcome{Termination::Draw_50MoveRule};
         recordOutcome(outcome);
-        return _cache.optOutcome;
+        return outcome;
     }
 
     // Cached value for game in progress must differ from that representing an emtpy cache).
     GameOutcome outcome{Termination::None};
     recordOutcome(outcome);
-    return _cache.optOutcome;
+    return outcome;
 }
 
 template<>
-GameOutcome Board<Glinski>::getOutcome() const {
-    assert(getOptOutcome().has_value());
-    return getOptOutcome().value();
-}
-
-// ----------------------------------------
-
-template<>
-bool Board<Glinski>::getIsGameOver() const {
-    bool result = getOptOutcome().has_value()
-                && getOptOutcome().value().termination() != Termination::None;
-    return result;
-}
-
-// ========================================
-
-template<>
-void Board<Glinski>::_bitsConsistencyTest() const {
-    for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
-        Short pieceFoundCount = 0;
-        for (Color c : {Color::Black, Color::White}) {
-            Short thisColorPieceFoundCount = 0;
-            if (_colorToKingBits.at(c).test(index)) {
-                thisColorPieceFoundCount++;
-            }
-            if (_colorToQueenBits.at(c).test(index)) {
-                thisColorPieceFoundCount++;
-            }
-            if (_colorToRookBits.at(c).test(index)) {
-                thisColorPieceFoundCount++;
-            }
-            if (_colorToBishopBits.at(c).test(index)) {
-                thisColorPieceFoundCount++;
-            }
-            if (_colorToKnightBits.at(c).test(index)) {
-                thisColorPieceFoundCount++;
-            }
-            if (_colorToPawnBits.at(c).test(index)) {
-                thisColorPieceFoundCount++;
-            }
-
-            assert(thisColorPieceFoundCount <= 1);
-            if (thisColorPieceFoundCount > 0) {
-                assert(_colorToAnyPieceBits.at(c).test(index));
-            }
-            pieceFoundCount += thisColorPieceFoundCount;
-        }
-        assert(pieceFoundCount <= 1);
-        if (pieceFoundCount > 0) {
-            assert(_anyPieceBits.test(index));
-        }
+bool Board<Glinski>::getIsGameOver() cache_const {
+    bool hasTermination = getOptOutcome().has_value();
+    if (!hasTermination) {
+        return false;
     }
-}
-
-template<>
-void Board<Glinski>::_bitsMove(map<Color, typename Glinski::Bits>& bits,
-    Color mover, Index from, Index to)
-{
-    bits[mover].reset(from);
-    bits[mover].set(to);
-}
-
-template<>
-void Board<Glinski>::_bitsMove(typename Glinski::Bits& bits,
-    Index from, Index to)
-{
-    bits.reset(from);
-    bits.set(to);
-}
-
-template<>
-void Board<Glinski>::_bitsReset(Index index, Color c, PieceType pt) {
-    assert(getColorAt(index) == c);
-    _anyPieceBits.reset(index);
-    _colorToAnyPieceBits[c].reset(index);
-    _colorToKingBits[c].reset(index);
-    _colorToQueenBits[c].reset(index);
-    _colorToRookBits[c].reset(index);
-    _colorToBishopBits[c].reset(index);
-    _colorToKnightBits[c].reset(index);
-    _colorToPawnBits[c].reset(index);
+    Termination t = getOptOutcome().value().termination();
+    return t != Termination::None;
 }
 
 /// \todo Return bool or std::optional<Termination>?
 template<>
-void Board<Glinski>::moveExec(Move& move) {
+void Board<Glinski>::moveExec(const Move& move) {
+    Scope scope{"Board::moveExec"};
     // TODO: Find why these sometimes don't match
-    bool verbose = false;
-    if (verbose) {
-        cout << "Starting move #"
-             << _currentCounter + 1 << " "
-             << "(" << color_long_string(move.mover()) << ") "
-             << move.move_pgn_string(false) << "n";
+    bool verbose = hexchess::general_verbose;
+    bool debug{true};
+
+    print(cout, scope(), "Board=", name(), "[1], counter=", currentCounter(),
+         ". Making assertion for move=", move.move_pgn_string(false), "\n");
+    // Note: A computer player exploring the game tree can make a move capturing a King.
+    //       This frees them up from having to continually detect for check.
+    // assert(!move.optCaptured().has_value()
+    //    || move.optCaptured().value() != PieceType::King);
+    print(cout, scope(), "Board=", name(), "[2], counter=", currentCounter(),
+         ". Making consistency check for move=", move.move_pgn_string(false), "\n");
+    if (debug) {
         _bitsConsistencyTest();
     }
 
     // ========== Capture ==========
     // The destination is either empty, or it's a capture
+// cout << "====================\n";
+// print(cout, scope(), "\n",
+//     "\tboard=", name(), "\n",
+//     "\tmove.from()=", move.from(), "\n",
+//     "\tmove.to()=", move.to(), "\n",
+//     "\tmove.mover()=", move.mover(), "\n",
+//     "\tis any piece at to?: ", isPieceAt(move.to()), "\n",
+//     "\tis mover's (", move.mover(), ") piece at to?: ",
+//         isPieceAt(move.to(), move.mover()), "\n",
+//     "\tis opponent's (", opponent(move.mover()), ") piece at to?: ",
+//         isPieceAt(move.to(), opponent(move.mover())), "\n",
+//     "\tmove.isCapture()=", move.isCapture(), "\n",
+//     "\tboard before assertion:\n");
+
     assert(!isPieceAt(move.to())
            || (isPieceAt(move.to(), opponent(move.mover()))
                && move.isCapture()
@@ -1000,10 +1165,6 @@ void Board<Glinski>::moveExec(Move& move) {
                      : move.to();
         Color c = opponent(move.mover());
         PieceType pt = move.optCaptured().value();
-        if (verbose) {
-            cout << "\t moveExec: Capture of "
-                 << piece_type_string(pt) << "\n";
-        }
         _bitsReset(capInd, c, pt);
     }
     _bitsConsistencyTest();
@@ -1015,31 +1176,29 @@ void Board<Glinski>::moveExec(Move& move) {
     switch (move.pieceType()) {
     case PieceType::King:
         _bitsMove(_colorToKingBits, move.mover(), move.from(), move.to());
-        _colorToKingIndex[move.mover()] = move.to();
-        if (verbose) { cout << "\t moveExec: Moving a King\n"; }
+        setKingIndex(move.to(), move.mover());
         break;
     case PieceType::Queen:
         _bitsMove(_colorToQueenBits, move.mover(), move.from(), move.to());
-        if (verbose) { cout << "\t moveExec: Moving a Queen\n"; }
         break;
     case PieceType::Rook:
         _bitsMove(_colorToRookBits, move.mover(), move.from(), move.to());
-        if (verbose) { cout << "\t moveExec: Moving a Rook\n"; }
         break;
     case PieceType::Bishop:
         _bitsMove(_colorToBishopBits, move.mover(), move.from(), move.to());
-        if (verbose) { cout << "\t moveExec: Moving a Bishop\n"; }
         break;
     case PieceType::Knight:
         _bitsMove(_colorToKnightBits, move.mover(), move.from(), move.to());
-        if (verbose) { cout << "\t moveExec: Moving a Knight\n"; }
         break;
     case PieceType::Pawn:
         _bitsMove(_colorToPawnBits, move.mover(), move.from(), move.to());
-        if (verbose) { cout << "\t moveExec: Moving a Pawn\n"; }
+        if (move.optPromotedTo().has_value()) {
+            changePieceType(move.to(), move.mover(), PieceType::Pawn,
+                move.optPromotedTo().value());
+        }
         break;
     default:
-        throw std::logic_error("Board: moveMake: Unrecognized PieceType");
+        throw std::logic_error("Board::moveMake: Unrecognized PieceType");
     }
     _bitsConsistencyTest();
 
@@ -1052,11 +1211,14 @@ void Board<Glinski>::moveExec(Move& move) {
 
     // ---------- Set en passant cell ----------
     if (move.pieceType() == PieceType::Pawn
-       && abs(V::row(move.to() - move.from())) == 4) // 4 half-rows = 2 rows
+       && abs(V::row(move.to() - move.from())) == 4)  // 4 half-rows = 2 rows
     {
         // One step forward from Pawn's starting position.
         // Note: Taking the 1st of the advance positions is variant-specific.
-        if (verbose) { cout << "\t moveExec: Setting e.p. index\n"; }
+        if (verbose) {
+            print(cout, scope(), "Board=", name(), "[3], counter=", currentCounter(),
+                ". Setting e.p. index\n");
+        }
         Index epInd = V::colorToPawnAdvance1Indices
                           .at(move.mover()).at(move.from())[0];
         _optEpIndex = std::make_optional(epInd);
@@ -1089,22 +1251,25 @@ void Board<Glinski>::moveExec(Move& move) {
     _moveStack.push_back(move);
 
     // ========== Next move and isGameOver check ==========
-    _cache.clear();
-    _currentCounter += 1;
+    _cache.clear(_currentCounter);
+    _currentCounter++;
     _mover = nextPlayer(move.mover());
-    (void) getLegalMoves(_mover);
-    (void) getOptOutcome();
-    if (getIsGameOver()) {
-        string msg = getOptOutcome().value().game_outcome_reader_string(move.mover());
-        cout << "Game is over: " << msg << "\n";
-    }
+    // (void) getLegalMoves(_mover);
+    // (void) getOptOutcome();
+
+    // if (getIsGameOver()) {
+    //     string msg = getOptOutcome().value().game_outcome_reader_string(move.mover());
+    //     cout << "Game is over: " << msg << "\n";
+    // }
 
     // ---------- Clear Update cache ----------
     if (verbose) {
         _bitsConsistencyTest();
-        cout << "========== Completed move #"
-             << _currentCounter
-             << " ==========\n";
+        print(cout, scope(), "Board=", name(), "[4], counter=", currentCounter(),
+            ". ========== ",
+            " Mover ", color_long_string(move.mover()),
+            " completed move #", _currentCounter + 1, ": ", move.move_pgn_string(false),
+            " ==========\n");
     }
 }
 
@@ -1113,9 +1278,17 @@ void Board<Glinski>::moveRedo(const Move& move) {
     throw NotImplementedException{"Move::moveRedo"};
 }
 
+#include <type_traits>
 /// \todo Use Qt's Undo framework
 template<>
 void Board<Glinski>::moveUndo(const Move& move) {
+    Scope scope{"Board::moveUndo"};
+
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", move.moveEnum()=", move.moveEnum(), ". Entering\n");
+
     // TODO: Sanity check that there is actually a Move history
     switch (move.moveEnum()) {
     case MoveEnum::Castling:
@@ -1124,6 +1297,10 @@ void Board<Glinski>::moveUndo(const Move& move) {
     case MoveEnum::EnPassant: {
         // Replace captured Pawn
         // Note: The following is variant-specific
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", Undoing en passant move\n");
         Color opp = opponent(move.mover());
         HexDir oppFwd{V::pawnAdvanceDirs(opp)[0]};
         HexPos captPos{V::indexToPos(move.to()) + oppFwd};
@@ -1132,36 +1309,65 @@ void Board<Glinski>::moveUndo(const Move& move) {
         break;
     }
     case MoveEnum::PawnPromotion:
+        print(cout, scope(), "Counter=", currentCounter(),
+            ", moveStack.size()=", _moveStack.size(),
+            ", move to undo=", move.move_pgn_string(false),
+            ", PawnPromotion. Changing piece type back to Pawn.\n");
         // Convert promoted piece back to Pawn
         changePieceType(move.to(), move.mover(),
             move.optPromotedTo().value(), PieceType::Pawn);
+        print(cout, scope(), "Counter=", currentCounter(),
+            ", moveStack.size()=", _moveStack.size(),
+            ", move to undo=", move.move_pgn_string(false),
+            ", PawnPromotion. Changing piece type back to Pawn.\n");
         break;
     default:
         // Simple move: Handled below
         break;
     }
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", PawnPromotion. Moving piece back to original position.\n");
     // Move piece back to original location
     movePiece(move.to(), move.from(), move.mover(), move.pieceType());
 
     // Replace captured piece, if any
     if (move.isCapture()) {
+        print(cout, scope(), "Counter=", currentCounter(),
+            ", moveStack.size()=", _moveStack.size(),
+            ", move to undo=", move.move_pgn_string(false),
+            ", PawnPromotion. Replacing captured piece.\n");
         addPiece(move.to(), opponent(move.mover()), move.optCaptured().value());
     }
 
     // \todo Modify the following to support moveRedo
 
     // Undo Zobrist hash history
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", PawnPromotion. Undoing Zobrist hash history.\n");
     ZHash lastHash = _zHashes.at(_zHashes.size() - 1);
     _zHashes.pop_back();  // Remove from per-ply vector of board hashes
     _zHashToCounters[lastHash].pop_back();  // Remove last occurrence of this hash
 
     // Undo nonProgressCounters
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", PawnPromotion. Undoing non-progress counters.\n");
     _nonProgressCounters.pop_back();
 
-    _mover = prevPlayer(move.mover());
-    _moveStack.pop_back();
-
     // _optEpIndex
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", PawnPromotion. Undoing optEpIndex.\n");
+    for (Size k = 0; k < _moveStack.size(); ++k) {
+        print(cout, scope(), "Counter=", currentCounter(),
+            ", moveStack[", k, "]=", _moveStack.at(k).move_pgn_string(false), "\n");
+    }
     const Move& prevMove = _moveStack.at(_currentCounter - 1);
     if (abs(V::row(prevMove.to()) - V::row(prevMove.from())) == 4) {
         _optEpIndex = V::average(prevMove.to(), prevMove.from());
@@ -1169,12 +1375,19 @@ void Board<Glinski>::moveUndo(const Move& move) {
         _optEpIndex = std::nullopt;
     }
 
+    print(cout, scope(), "Counter=", currentCounter(),
+        ", moveStack.size()=", _moveStack.size(),
+        ", move to undo=", move.move_pgn_string(false),
+        ", PawnPromotion. Undoing mover and moveStack.\n");
+    _mover = prevPlayer(move.mover());
+    _moveStack.pop_back();
+
     // Undo HalfMoveCounter and mover Color
     _currentCounter--;
 
     // Update cache
-    _cache.clear();
-    (void) getLegalMoves(_mover);
+    _cache.clear(_currentCounter);
+    // (void) getLegalMoves(_mover);
 }
 
 // ========================================
@@ -1190,18 +1403,8 @@ const Indices Board<Glinski>::attackers(Index tgtInd, const Moves& moves) const 
     return result;
 }
 
-// template<>
-// bool Board<Glinski>::causesCheck(const Move& move) {
-//     throw NotImplementedException{"Board<Glinski>::causesCheck(Color)"};
-// }
-
 template<>
-bool Board<Glinski>::isCheck() const {
-    return getCheckEnum() == CheckEnum::Check;
-}
-
-template<>
-bool Board<Glinski>::isCheckmate() const {
+bool Board<Glinski>::isCheckmate() cache_const{
     return getIsGameOver()
         && getOptOutcome().value().termination() == Termination::Win_Checkmate;
 }
@@ -1224,17 +1427,8 @@ bool Board<Glinski>::isDrawByStalemate() const {
 
 /// \todo Impement Board<>::pinningIndices for Board evaluation?
 // template<>
-// Indices Board<Glinski>::pinnningIndices(Index tgtInd, Color c) const {
+// Indices Board<Glinski>::pinningIndices(Index tgtInd, Color c) const {
 //     throw NotImplementedException{"Board<Glinski>::pinningIndides"};
 // }
-template<>
-void Board<Glinski>::setMoveCheckEnum(Move& move) {
-    throw NotImplementedException{};
-    // Idea:
-    // Move move = Move(move);
-    // Index kIndex = getKingIndex(move.mover);
-    // Test for Check and Checkmate
-    // moveUndo(move);
-}
 
 }  // namespace hexchess::core
