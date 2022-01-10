@@ -42,6 +42,7 @@ string termination_string(Termination t) {
             "insufficient resources (i.e., pieces left cannot force a checkmate)" },
         { Termination::Draw_Stalemate,    "stalemate" }
     };
+    assert(t != Termination::None);
     return t2s[t];
 }
 
@@ -79,6 +80,13 @@ string GameOutcome::game_outcome_reader_string(Color reader) const {
 
     oss << "Your score is " << score(reader);
 
+    return oss.str();
+}
+
+string GameOutcome::game_outcome_short_string() const {
+    std::ostringstream oss;
+    oss << termination_string(termination()) << "-"
+        << (isWin() ? color_long_string(winner()) : "NoWinner");
     return oss.str();
 }
 
