@@ -27,10 +27,16 @@
 
 #include <QObject>
 
+#include "util.h"
+
 
 namespace hexchess {
     extern bool events_verbose;
+    extern bool general_verbose;
 }
+
+#define cache_mutable mutable
+#define cache_const const
 
 namespace hexchess::core {
 Q_NAMESPACE
@@ -75,6 +81,33 @@ using Strings = std::vector<std::string>;
 using Value = int;
 constexpr Value negInfinity{-1'000'000};
 constexpr Value posInfinity{+1'000'000};
+
+/// \brief Thrown by any class that is defined, but not implemented.
+class Scope {
+public:
+    const std::string name() { return _name; }
+
+    Scope(const std::string& name, bool doPrintEnterExit=false)
+        : _doPrintEnterExit{doPrintEnterExit},
+          _name{name}
+    {
+        if (_doPrintEnterExit) {
+            print(std::cout, _name, ": Entering\n");
+        }
+    }
+    std::string operator()(const std::string& msg="") const {
+        return _name + ": " + msg;
+    }
+    ~Scope() {
+        if (_doPrintEnterExit) {
+            print(std::cout, _name, ": Exiting\n");
+        }
+    }
+
+private:
+    const bool _doPrintEnterExit;
+    const std::string _name;
+};
 
 // ========================================
 // Enums
@@ -150,11 +183,12 @@ constexpr PieceType pieceTypes[6] {
 using PieceTypes = std::vector<PieceType>;  // For listing available promotion types
 PieceType piece_type_parse(char ch);
 const std::string piece_type_string(PieceType pt);
-
 inline std::ostream& operator<<(std::ostream& os, PieceType pt) {
     os << piece_type_string(pt);
     return os;
 }
+bool isLeaper(PieceType pt);
+bool isSlider(PieceType pt);
 
 /// \brief Returns a two-character, upper-case code for each piece, such as BK or WQ.
 ///
