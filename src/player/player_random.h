@@ -17,6 +17,8 @@
 
 #include <time.h>
 
+#include <iostream>
+
 #include "board.h"
 #include "fen.h"
 #include "game_outcome.h"
@@ -41,28 +43,67 @@ public:
     typedef Glinski V;
 
     PlayerRandom() : _name{"PlayerRandom"} {}
-    virtual ~PlayerRandom() override {}
+    PlayerRandom(const std::string& name) : _name{name} {}
+    virtual ~PlayerRandom() override {
+        std::cout << "********** PlayerRandom: Destructing Player " << _name << "**********\n";
+    }
 
+    virtual bool isHuman() const override { return false; }
     virtual const std::string name() const override { return _name; }
     virtual void setName(std::string name) override { _name = name; }
 
+    virtual MainWindow* gui() const override { return _gui; }
+    virtual void setGui(MainWindow *mwp) override {
+        Scope scope{"PlayerRandom::setGui"};
+        print(std::cout, scope(), "Player=", name(), ", counter=", _board.currentCounter(),
+            ". Setting MainWindow for GUI @ ", std::hex, _gui, std::dec, "\n");
+        _gui = mwp;
+    }
+    virtual void showGui() const override {
+        Scope scope{"PlayerRandom::showGui"};
+        print(std::cout, scope(), "Player=", name(), ", counter=", _board.currentCounter(),
+            ". Showing MainWindow for ", name(), ": ", std::hex, _gui, std::dec, "\n");
+        _gui->show();
+    }
+
 public slots:
     // ========================================
+    // Game <--> Player
+
+    // ----------------------------------------
     // Broadcast
-    virtual void initializeBoard(const Fen<V>& fen) override;
-    virtual void showCheckToPlayer(Color checked, Index kingInd) override;
+    virtual void receiveBoardInitializationFromServer(const Fen<Glinski>& fen) override;
+    virtual void receiveCheckFromServer(Color checked, Index kingInd) override;
+
+    // ----------------------------------------
+    // Sent individually
+    virtual void receiveActionRequestFromServer(Color mover, const Moves legalMoves) override;
+    virtual void receiveActionFromServer(Color mover, const PlayerAction action) override;
+    virtual void receiveGameOutcomeFromServer(Color receiver, const GameOutcome& gameOutcome) override;
 
     // ========================================
-    // Sent individually
-    virtual void showActionRequestToPlayer(Color mover) override;
-    virtual void showActionToPlayer(Color mover, PlayerAction& action) override;
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
+    // Player <--> GUI
+
+    virtual void receiveActionFromGui(Color mover, const PlayerAction& action) override;
 
 signals:
+    // ========================================
+    // Game <--> Player
+
     void sendActionToServer(Color mover, PlayerAction action);
 
-private:
-    Board<V> _board{false};
+    // ========================================
+    // Player <--> GUI
+    void sendBoardInitializationToGui(const Fen<Glinski>& fen);
+
+    void sendActionRequestToGui(Color mover, const Moves legalMoves);
+    void sendActionToGui(Color mover, const PlayerAction& action);
+    void sendCheckToGui(Color checked, Index kingInd);
+    void sendGameOutcomeToGui(Color receiver, const GameOutcome& gameOutcome);
+
+protected:
+    Board<V> _board{"PlayerRandom", false};
+    MainWindow *_gui;
     std::string _name;
 };
 
