@@ -26,16 +26,20 @@
 #include <QSvgWidget>
 #include <QtWidgets>
 
+#include "board.h"
+#include "fen.h"
+#include "move.h"
 #include "util_hexchess.h"
 #include "variant.h"
-#include "board.h"
 
 #include "stylecolor.h"
 #include "stylemeasure.h"
 
 using hexchess::core::Board;
+using hexchess::core::Fen;
 using hexchess::core::Glinski;
 using hexchess::core::Index;
+using hexchess::core::Move;
 using hexchess::core::OptColorPieceType;
 
 
@@ -45,6 +49,8 @@ class BoardWidget : public QWidget
     Q_OBJECT
 public:
     BoardWidget(QWidget *parent = nullptr);
+    void initializeBoard(const Fen<Glinski>& fen);
+    void execMove(const Move& move);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -84,6 +90,6 @@ private:
         CellStatusFlags status;
     };
 
-    Board<Glinski> _board{};
+    Board<Glinski> _board;
     std::vector<Cell> _cells;
 };

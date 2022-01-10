@@ -28,10 +28,13 @@
 #include <QSvgRenderer>
 #include <QtWidgets>
 
+#include "board.h"
+#include "fen.h"
+#include "move.h"
 #include "util_hexchess.h"
 #include "variant.h"
-#include "boardwidget.h"
 
+#include "boardwidget.h"
 #include "stylecolor.h"
 #include "stylefont.h"
 #include "styleicon.h"
@@ -44,9 +47,12 @@ using std::string;
 using std::map;
 using std::pair;
 
+using hexchess::core::Board;
 using hexchess::core::Color;
-using hexchess::core::Index;
+using hexchess::core::Fen;
 using hexchess::core::Glinski;
+using hexchess::core::Index;
+using hexchess::core::Move;
 using hexchess::core::PieceType;
 
 
@@ -113,11 +119,12 @@ const pair<int, int> BoardWidget::_cellCenterCoords(Index index) {
 }
 
 BoardWidget::BoardWidget(QWidget *parent)
-    : QWidget(parent)
+    : QWidget{parent},
+      _board{"BoardWidget", false}
 {
     setWindowTitle(tr("Hexchess"));
 
-    // Initialize Board
+    // Initialize cells. Board layout is initialized by initializeBoard
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
         _cells.push_back(Cell(index, CellStatus_None));
     }
@@ -128,6 +135,16 @@ BoardWidget::BoardWidget(QWidget *parent)
     resize(widgetWidth, widgetHeight);
     setMinimumWidth(widgetWidth);
     setMinimumHeight(widgetHeight);
+}
+
+void BoardWidget::initializeBoard(const Fen<Glinski>& fen) {
+    _board.initialize(fen);
+}
+
+void BoardWidget::execMove(const Move& move) {
+    cout << "BoardWidget:execMove calling moveExec with move=" << move.move_pgn_string(false) << "\n";
+    _board.moveExec(move);
+    repaint();
 }
 
 void BoardWidget::keyPressEvent(QKeyEvent *event)
@@ -154,7 +171,9 @@ void BoardWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter{this};
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(event->rect(), colorSettings[ColorEnum::Board_Background]);
+    if (event) {
+        painter.fillRect(event->rect(), colorSettings[ColorEnum::Board_Background]);
+    }
 
     QFont qFont{QString::fromStdString(board_font)};
     qFont.setPixelSize(board_font_size);
