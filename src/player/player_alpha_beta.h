@@ -26,6 +26,8 @@
 #include "util_hexchess.h"
 #include "variant.h"
 
+#include "ui/mainwindow.h"
+
 
 namespace hexchess::player {
 
@@ -47,27 +49,60 @@ class PlayerAlphaBeta : public Player {
 public:
     typedef Glinski V;
 
-    PlayerAlphaBeta(Short minDepth=3) : _minDepth{minDepth} {}
+    PlayerAlphaBeta(Short minDepth=3)
+        : _minDepth{minDepth},
+          _name{"PlayerAlphaBeta"}
+    {}
+    PlayerAlphaBeta(const std::string& name, Short minDepth=3)
+        : _minDepth{minDepth},
+          _name{name}
+    {}
     virtual ~PlayerAlphaBeta() override {};
 
+    virtual bool isHuman() const override { return false; }
     virtual const std::string name() const override { return _name; }
     virtual void setName(std::string name) override { _name = name; }
 
+    virtual MainWindow* gui() const override { return _gui; }
+    virtual void setGui(MainWindow *mwp) override { _gui = mwp; }
+    virtual void showGui() const override { _gui->show(); }
+
 public slots:
+    // ========================================
+    // Game <--> Player
+
     // Broadcast
-    virtual void initializeBoard(const Fen<V>& fen) override;
-    virtual void showCheckToPlayer(Color checked, Index kingInd) override;
+    virtual void receiveBoardInitializationFromServer(const Fen<Glinski>& fen) override;
+    virtual void receiveCheckFromServer(Color checked, Index kingInd) override;
 
     // Sent individually
-    virtual void showActionRequestToPlayer(Color mover) override;
-    virtual void showActionToPlayer(Color mover, PlayerAction& action) override;
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
+    virtual void receiveActionRequestFromServer(Color mover, const Moves legalMoves) override;
+    virtual void receiveActionFromServer(Color mover, const PlayerAction action) override;
+    virtual void receiveGameOutcomeFromServer(Color receiver, const GameOutcome& gameOutcome) override;
+
+    // ========================================
+    // Player <--> GUI
+
+    virtual void receiveActionFromGui(Color mover, const PlayerAction& action) override;
 
 signals:
+    // ========================================
+    // Game <--> Player
+
     void sendActionToServer(Color mover, PlayerAction action);
 
-private:
-    Board<Glinski> _board{false};
+    // ========================================
+    // Player <--> GUI
+    void sendBoardInitializationToGui(const Fen<Glinski>& fen);
+
+    void sendActionRequestToGui(Color mover, const Moves legalMoves);
+    void sendActionToGui(Color mover, const PlayerAction& action);
+    void sendCheckToGui(Color checked, Index kingInd);
+    void sendGameOutcomeToGui(Color receiver, const GameOutcome& gameOutcome);
+
+protected:
+    Board<Glinski> _board{"PlayerAlphaBeta", false};
+    MainWindow* _gui;
     Short _minDepth;
     std::string _name;
 };
