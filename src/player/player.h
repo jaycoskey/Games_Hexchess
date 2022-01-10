@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <string>
 
 #include <QObject>
@@ -26,6 +27,10 @@
 #include "util.h"
 #include "util_hexchess.h"
 #include "variant.h"
+
+#include "ui/mainwindow.h"
+
+using std::cout;
 
 
 namespace hexchess::player {
@@ -41,6 +46,7 @@ using core::Move;
 using core::Moves;
 using core::PieceType;
 using core::PlayerAction;
+using core::Scope;
 using core::Value;
 
 class Player : public QObject {
@@ -52,64 +58,125 @@ public:
     Player() {};
     virtual ~Player() {};
 
+    virtual bool isHuman() const = 0;
     virtual const std::string name() const = 0;
     virtual void setName(std::string name) = 0;
 
+    virtual MainWindow* gui() const = 0;
+    virtual void setGui(MainWindow *mwp) = 0;
+    virtual void showGui() const = 0;
+
 public slots:
+    // ========================================
+    // SERVER <--> Player
+
     // Broadcast
-    virtual void initializeBoard(const Fen<V>& fen) = 0;
-    virtual void showCheckToPlayer(Color checked, Index kingInd) = 0;
+    virtual void receiveBoardInitializationFromServer(const Fen<Glinski>& fen) = 0;
+    virtual void receiveCheckFromServer(Color checked, Index kingInd) = 0;
 
     // Sent individually
-    virtual void showActionRequestToPlayer(Color mover) = 0;
-    virtual void showActionToPlayer(Color mover, PlayerAction& action) = 0;
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) = 0;
+    virtual void receiveActionRequestFromServer(Color mover, const Moves legalMoves) = 0;
+    virtual void receiveActionFromServer(Color mover, const PlayerAction action) = 0;
+    virtual void receiveGameOutcomeFromServer(Color receiver, const GameOutcome& GameOutcome) = 0;
 
     // TODO: Receive DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Receive "superuser" board edits: addPiece, movePiece, removePiece
 
+    // ========================================
+    // Player <--> GUI
+
+    virtual void receiveActionFromGui(Color mover, const PlayerAction& action) = 0;
+
 signals:
-    void sendActionToServer(Color mover, PlayerAction action, Qt::ConnectionType ct);
+    // ========================================
+    // SERVER <--> Player
+
+    void sendActionToServer(Color mover, PlayerAction action);
     // TODO: Send DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Send "superuser" board edits: addPiece, movePiece, removePiece
+
+    // ========================================
+    // Player <--> GUI
+    void sendBoardInitializationToGui(const Fen<Glinski>& fen);
+
+    void sendActionRequestToGui(Color mover, const Moves& legalMoves);
+    void sendActionToGui(Color mover, const PlayerAction& action);
+    void sendCheckToGui(Color checked, Index kingInd);
+    void sendGameOutcomeToGui(Color receiver, const GameOutcome& GameOutcome);
 };
 
-template <typename GAME, typename P1, typename P2>
-void connectSignalsToSlots(const GAME& game, P1 *p1, P2 *p2) {
-    // Broadcast from server to players
-    QObject::connect(&game, &GAME::sendBoardInitializationToPlayers,
-                     p1,    &P1::initializeBoard);
-    QObject::connect(&game, &GAME::sendBoardInitializationToPlayers,
-                     p2,    &P2::initializeBoard);
+template <typename SERVER, typename P1, typename P2>
+void connectServerToPlayers(SERVER *server, P1 *p1, P2 *p2) {
+    Scope scope{"connectServerToPlayers", true};
 
-    QObject::connect(&game, &GAME::sendCheckToPlayers,
-                     p1,    &P1::showCheckToPlayer);
-    QObject::connect(&game, &GAME::sendCheckToPlayers,
-                     p2,    &P2::showCheckToPlayer);
+    // Sent from server to players collectively
+    assert(QObject::connect(server, &SERVER::sendBoardInitializationToPlayers,
+                            p1,     &P1::receiveBoardInitializationFromServer));
 
-    QObject::connect(&game, &GAME::sendGameOutcomeToPlayer1,
-                     p1,    &P1::showGameOutcomeToPlayer);
-    QObject::connect(&game, &GAME::sendGameOutcomeToPlayer2,
-                     p2,    &P2::showGameOutcomeToPlayer);
+    assert(QObject::connect(server, &SERVER::sendBoardInitializationToPlayers,
+                            p2,     &P2::receiveBoardInitializationFromServer));
+
+    assert(QObject::connect(server, &SERVER::sendCheckToPlayers,
+                            p1,     &P1::receiveCheckFromServer));
+
+    assert(QObject::connect(server, &SERVER::sendCheckToPlayers,
+                            p2,     &P2::receiveCheckFromServer));
 
     // Sent from server to players individually
-    QObject::connect(&game, &GAME::sendActionRequestToPlayer1,
-                     p1,    &P1::showActionRequestToPlayer);
-    QObject::connect(&game, &GAME::sendActionRequestToPlayer2,
-                     p2,    &P2::showActionRequestToPlayer);
+    assert(QObject::connect(server, &SERVER::sendGameOutcomeToPlayer1,
+                            p1,     &P1::receiveGameOutcomeFromServer));
 
-    QObject::connect(&game, &GAME::sendActionToPlayer1,
-                     p1,    &P1::showActionToPlayer);
-    QObject::connect(&game, &GAME::sendActionToPlayer2,
-                     p2,    &P2::showActionToPlayer);
+    assert(QObject::connect(server, &SERVER::sendGameOutcomeToPlayer2,
+                            p2,     &P2::receiveGameOutcomeFromServer));
+
+    assert(QObject::connect(server, &SERVER::sendActionRequestToPlayer1,
+                            p1,     &P1::receiveActionRequestFromServer));
+
+    assert(QObject::connect(server, &SERVER::sendActionRequestToPlayer2,
+                            p2,     &P2::receiveActionRequestFromServer));
+
+    assert(QObject::connect(server, &SERVER::sendActionToPlayer1,
+                            p1,     &P1::receiveActionFromServer));
+                            // Qt::QueuedConnection));
+
+    assert(QObject::connect(server, &SERVER::sendActionToPlayer2,
+                            p2,     &P2::receiveActionFromServer));
+                            // Qt::QueuedConnection));
 
     // Sent from player to server
-    QObject::connect(p1,    &P1::sendActionToServer,
-                     &game, &GAME::receiveActionFromPlayer,
-                     Qt::QueuedConnection);
-    QObject::connect(p2,    &P2::sendActionToServer,
-                     &game, &GAME::receiveActionFromPlayer,
-                     Qt::QueuedConnection);
+    assert(QObject::connect(p1,     &P1::sendActionToServer,
+                            server, &SERVER::receiveActionFromPlayer));
+                            // Qt::QueuedConnection));
+
+    assert(QObject::connect(p2,     &P2::sendActionToServer,
+                            server, &SERVER::receiveActionFromPlayer));
+                            // Qt::QueuedConnection));
+
+    print(std::cout, scope("Exiting"), "\n");
+}
+
+template <typename P, typename GUI>
+void connectPlayerToGui(P *player, GUI *gui) {
+    Scope scope{"Player::connectPlayerToGui", true};
+
+    // From Player to GUI
+    QObject::connect(player, &P::sendBoardInitializationToGui,
+                     gui,    &GUI::receiveBoardInitializationFromPlayer);
+
+    QObject::connect(player, &P::sendActionRequestToGui,
+                     gui,    &GUI::receiveActionRequestFromPlayer);
+    QObject::connect(player, &P::sendActionToGui,
+                     gui,    &GUI::receiveActionFromPlayer);
+    QObject::connect(player, &P::sendCheckToGui,
+                     gui,    &GUI::receiveCheckFromPlayer);
+    QObject::connect(player, &P::sendGameOutcomeToGui,
+                     gui,    &GUI::receiveGameOutcomeFromPlayer);
+
+    // Sent from GUI to Player
+    QObject::connect(gui,    &GUI::sendActionToPlayer,
+                     player, &P::receiveActionFromGui);
+
+    print(std::cout, scope("Exiting"), "\n");
 }
 
 }  // namespace hexchess::player
