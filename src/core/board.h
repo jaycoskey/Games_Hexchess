@@ -64,7 +64,7 @@ public:
     void setPiece(Index index, Color c, PieceType pt, bool value);
 
     /// \brief Sets the appropriate bits in this class's boards to reflect that the given piece has been added.
-    void addPiece(Index index, Color c, PieceType pt, bool verbose=false);
+    void addPiece(Index index, Color c, PieceType pt);
 
     /// \brief Resets bits in this class's boards to reflect that the given piece has been removed.
     void removePiece(Index index, Color c, PieceType pt);
@@ -75,10 +75,10 @@ public:
     // ========================================
     // Constructors
 
-    Board(bool doPopulate=true);
-    Board(const Fen<V>& fen);
-    Board(const std::string& fenStr);
-    Board(const Board& other);
+    Board(const std::string& name, bool doPopulate=true);
+    Board(const std::string& name, const Fen<V>& fen);
+    Board(const std::string& name, const std::string& fenStr);
+    Board(const std::string& name, const Board& other);
     ~Board() {}
     Board& operator=(const Board& other) = default;  // TODO: Implement
 
@@ -86,7 +86,19 @@ public:
     // Fundamental operations
 
     void clear();
+    const std::string& name() const { return _name; }
     void reset(bool doPopulate);
+
+    Board<V> shallowCopyMove(const std::string& name, const Move& move) const {
+        Fen fenTmp = fen();
+        fenTmp.currentCounter = (move.mover() == Color::Black ? 1 : 0);
+        Board b{name, fenTmp};
+        if (move.mover() == Color::Black) {  // Add dummy data for the previous move
+            b._zHashToCounters[0] = Shorts{1, b.currentCounter()};
+            b._zHashes.push_back(0);
+        }
+        return b;
+    }
 
     // ========================================
     // Non-piece data
@@ -97,7 +109,7 @@ public:
     // ========================================
     // Write piece data
 
-    void setKingIndex(Color c, Index index) { _colorToKingIndex[c] = index; }
+    void setKingIndex(Index index, Color c) { _colorToKingIndex[c] = index; }
 
     // ========================================
     // Piece movement capatibilities (stored as Bits and Indices)
@@ -113,42 +125,60 @@ public:
     }
 
     /// \brief Returns a lookup for Player \p c: Which cells allow a Pawn to advance two cells forward.
-    Indices pawnCaptureBits(Index from, Color c) const {
-        return V::_colorToPawnCaptureBits.at(c).at(from);
-    }
+    // Indices pawnCaptureBits(Index from, Color c) const {
+    //     return V::_colorToPawnCaptureBits.at(c).at(from);
+    // }
 
     // ========================================
     // Read piece data
 
     /// \brief Returns a Board reflecting which board locations have any piece present.
-    const typename V::Bits anyPieceBits()              const { return _anyPieceBits;              }
+    const typename V::Bits anyPieceBits() const {
+        return _anyPieceBits;
+    }
 
     /// \brief Returns a Board reflecting which board locations have any piece of the specified color.
-    const typename V::Bits anyPieceBits(const Color c) const { return _colorToAnyPieceBits.at(c); }
+    const typename V::Bits anyPieceBits(const Color c) const {
+        return _colorToAnyPieceBits.at(c);
+    }
 
     /// \brief Returns a Board reflecting which board location(s) have a King of the specified color.
-    const typename V::Bits kingBits(const Color c)     const { return _colorToKingBits.at(c);     }
+    const typename V::Bits kingBits(const Color c) const {
+        return _colorToKingBits.at(c);
+    }
 
     /// \brief Returns a Board reflecting which board location(s) have a Queen of the specified color.
-    const typename V::Bits queenBits(const Color c)    const { return _colorToQueenBits.at(c);     }
+    const typename V::Bits queenBits(const Color c) const {
+        return _colorToQueenBits.at(c);
+    }
 
     /// \brief Returns a Board reflecting which board location(s) have a Rook of the specified color.
-    const typename V::Bits rookBits(const Color c)     const { return _colorToRookBits.at(c);      }
+    const typename V::Bits rookBits(const Color c) const {
+        return _colorToRookBits.at(c);
+    }
 
     /// \brief Returns a Board reflecting which board location(s) have a Bishop of the specified color.
-    const typename V::Bits bishopBits(const Color c)   const { return _colorToBishopBits.at(c);    }
+    const typename V::Bits bishopBits(const Color c) const {
+        return _colorToBishopBits.at(c);
+    }
 
     /// \brief Returns a Board reflecting which board location(s) have a Knight of the specified color.
-    const typename V::Bits knightBits(const Color c)   const { return _colorToKnightBits.at(c);    }
+    const typename V::Bits knightBits(const Color c) const {
+        return _colorToKnightBits.at(c);
+    }
 
     /// \brief Returns a Board reflecting which board location(s) have a Pawn of the specified color.
-    const typename V::Bits pawnBits(const Color c)     const { return _colorToPawnBits.at(c);      }
+    const typename V::Bits pawnBits(const Color c) const {
+        return _colorToPawnBits.at(c);
+    }
 
     // ========================================
     // Piece index queries
 
     /// \brief Returns a boolean reflecting which board location(s) have a Pawn of the specified color.
-    bool isPieceAt(const Index index)                 const { return _anyPieceBits.test(index);   }
+    bool isPieceAt(const Index index) const {
+        return _anyPieceBits.test(index);
+    }
 
     /// \brief Returns a boolean reflecting whether a piece with Color \p c is present at Index \p index.
     bool isPieceAt(const Index index, const Color c)  const {
@@ -156,22 +186,22 @@ public:
     }
 
     /// \brief Returns a boolean reflecting whether a King with Color \p c is present at Index \p index.
-    bool isKingAt(const Index index, const Color c)   const { return _colorToKingBits.at(c).test(index);      }
+    bool isKingAt(const Index index, const Color c)   const { return _colorToKingBits.at(c).test(index);   }
 
     /// \brief Returns a boolean reflecting whether a Queen with Color \p c is present at Index \p index.
-    bool isQueenAt(const Index index, const Color c) const { return _colorToQueenBits.at(c).test(index);     }
+    bool isQueenAt(const Index index, const Color c) const { return _colorToQueenBits.at(c).test(index);   }
 
     /// \brief Returns a boolean reflecting whether a Rook with Color \p c is present at Index \p index.
-    bool isRookAt(const Index index, const Color c)   const { return _colorToRookBits.at(c).test(index);      }
+    bool isRookAt(const Index index, const Color c)   const { return _colorToRookBits.at(c).test(index);   }
 
     /// \brief Returns a boolean reflecting whether a Bishop with Color \p c is present at Index \p index.
-    bool isBishopAt(const Index index, const Color c) const { return _colorToBishopBits.at(c).test(index);    }
+    bool isBishopAt(const Index index, const Color c) const { return _colorToBishopBits.at(c).test(index); }
 
     /// \brief Returns a boolean reflecting whether a Knight with Color \p c is present at Index \p index.
-    bool isKnightAt(const Index index, const Color c) const { return _colorToKnightBits.at(c).test(index);    }
+    bool isKnightAt(const Index index, const Color c) const { return _colorToKnightBits.at(c).test(index); }
 
     /// \brief Returns a boolean reflecting whether a Pawn with Color \p c is present at Index \p index.
-    bool isPawnAt(const Index index, const Color c)   const { return _colorToPawnBits.at(c).test(index);      }
+    bool isPawnAt(const Index index, const Color c)   const { return _colorToPawnBits.at(c).test(index);   }
 
     Index getKingIndex(Color c) const { return _colorToKingIndex.at(c); }
 
@@ -234,9 +264,9 @@ public:
     // String methods
 
     // Record current Board state in Forsyth-Edwards Notation (FEN)
-    const std::string board_bits_string() /* const */;
+    const std::string board_bits_string() const;
 
-    const std::string board_string() /* const */;
+    const std::string board_string() const;
 
     // Record current Board state in Forsyth-Edwards Notation (FEN)
     const std::string fen_string() const;
@@ -246,8 +276,8 @@ public:
     // ========================================
     // Finding, getting, and caching moves
 
-    void recordObstructedHexRayCore(Index obsIndex, Index rayStart, const HexDir& rayDir) const;
-    const HexRayCores getObstructedHexRayCores(Index obsIndex) const;
+    void recordObstructedHexRayCore(Index obsIndex, Index rayStart, const HexDir& rayDir) cache_const;
+    const HexRayCores getObstructedHexRayCores(Index obsIndex) cache_const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     "leaper" piece at location \p index with PieceType \pt and Color \c.
@@ -262,7 +292,7 @@ public:
     ///
     /// (The possible slide directions of the piece are passed in as the argument \p rays.)
     void findSlideMoves(/* out */ Moves& moves,
-        Index from, Color mover, PieceType pt, const HexRays<V>& rays
+        Index from, Color mover, PieceType pt, const HexRays<V>& rays, bool isVirtual=false
         ) const;
 
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
@@ -276,35 +306,173 @@ public:
     /// \brief Outputs to \p moves_first (a collection of Move objects) the pseudo-legal moves for a
     ///     piece with PieceType \pt and Color \c at location \index.
     void findPseudoLegalMoves(/* out */ Moves& moves,
-        Index index, Color mover, PieceType pt
+        Index index, Color mover, PieceType pt, bool isVirtual=false
         ) const;
 
     /// \todo PERFORMANCE: Check if this should direct output to an iterator argument
     void findPseudoLegalMoves(/* out */ Moves& moves, Color mover) const;
 
-    void recordPseudoLegalMoves(const Moves& moves) const;
-    Moves getPseudoLegalMoves(Color mover) const;  // Get through cache
+private:
+    bool _moveSanityCheck(const Move& move) const;
+public:
+    void recordPseudoLegalMoves(const Moves& moves) cache_const;
+    Moves getPseudoLegalMoves(Color mover) cache_const;
 
     // ----------------------------------------
 
-    bool isOwnKingAttackedAfterOwnMove(Color mover, Index from, Index to) const;
-    void findLegalMoves(/* out */ Moves& moves, Color c, const Moves& pseudoLegalMoves) const;
-    void recordLegalMoves(const Moves& moves) const;
-    Moves getLegalMoves(Color mover) const;  // Get through cache
+    bool isOwnKingAttackedAfterOwnMove(const Move& move) const {
+        Scope scope{"Board::isOwnKingAttackedAfterOwnMove"};
 
-    bool isAttacked(Index tgtIndex, Color tgtColor) const;
+        if (move.pieceType() == PieceType::King) {
+            Index kIndex = getKingIndex(move.mover());
+            Board b = shallowCopyMove("Board_isOwnKingAttackedAfterOwnMove_Copy", move);
+            print(std::cout, scope(), "Board=", name(), ", counter=", currentCounter(),
+                ". Calling moveExec on shallow copy of board. Move=",
+                move.move_pgn_string(false), "\n");
+            b.moveExec(move);
+            for (const Move& candMove : b.getPseudoLegalMoves(b.mover())) {
+                if (candMove.to() == kIndex) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            return _isKingAttackedAfterMove(move, move.mover());
+        }
+    }
+
+    bool isPseudoLegalMoveLegal(const Move& candMove) const {
+        Scope scope{"Board::isPseudoLegalMoveLegal"};
+
+        Color mover = candMove.mover();
+        if (candMove.pieceType() == PieceType::King) {
+            Board b = shallowCopyMove("Board_FindLegalMoves_Copy", candMove);
+            print(std::cout, scope(), "Board=", name(), ", counter=", currentCounter(),
+                ". Calling moveExec for a shallow copy of the board\n");
+            b.moveExec(candMove);
+            const Moves& quasiLegalMoves = b.getPseudoLegalMoves(b.mover());
+            for (const Move& qlMove : quasiLegalMoves) {
+                if (qlMove.to() == getKingIndex(mover)) {
+                    return false;
+                }
+            }
+            return true;
+        } else if (!isOwnKingAttackedAfterOwnMove(candMove)) {  // Can re-use cached move info
+            return true;
+        }
+        return false;  // NOT_REACHED
+    }
+
+    void findLegalMoves(/* out */ Moves& moves, Color c, const Moves& pseudoLegalMoves) const
+    {
+        Scope scope{"Board::findLegalMoves"};
+
+        for (const Move& candMove : pseudoLegalMoves) {
+            if (isPseudoLegalMoveLegal(candMove)) {
+                moves.push_back(candMove);
+            }
+        }
+    }
+
+    void recordLegalMoves(const Moves& moves) cache_const;
+    const Moves getLegalMoves(Color mover) cache_const;  // Get through cache
+    CheckEnum setLegalMoveCheckEnums(Color mover) cache_const;
+
+    // Note: As currently defined, this can't be used to test spaces between King & Rook
+    bool isOpponentCellAttacked(Index tgtIndex) cache_const {
+        for (const Move& move : getLegalMoves(mover())) {
+            if (move.to() == tgtIndex) {
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /// \brief Determine if a specific cell is attacked. Can be used to determine Castling availability.
+    ///
+    /// Note: Does not execute any moves, nor does it rely on cached move information.
+    bool isOwnCellAttacked(Index tgtIndex) cache_const {
+        for (auto [from, c, pt] : piecesDense(opponent(mover()))) {
+            switch(pt) {
+            case PieceType::King:
+                for (Index kDest : V::kingDests.at(from)) {
+                    if (kDest == from) {
+                        return true;
+                    }
+                }
+                break;
+            case PieceType::Queen:
+                for (HexRay qRay : V::queenRays.at(from)) {
+                    if (qRay.contains(from)) {
+                        for (Index dest : qRay.indices()) {
+                            if (isPieceAt(dest)) {
+                                if (dest == tgtIndex) {
+                                    return true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+            case PieceType::Rook:
+                for (HexRay rRay : V::rookRays.at(from)) {
+                    if (rRay.contains(from)) {
+                        for (Index dest : rRay.indices()) {
+                            if (isPieceAt(dest)) {
+                                if (dest == tgtIndex) {
+                                    return true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+            case PieceType::Bishop:
+                for (HexRay bRay : V::bishopRays.at(from)) {
+                    if (bRay.contains(from)) {
+                        for (Index dest : bRay.indices()) {
+                            if (isPieceAt(dest)) {
+                                if (dest == tgtIndex) {
+                                    return true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+            case PieceType::Knight:
+                for (Index nDest : V::knightDests.at(from)) {
+                    if (nDest == from) {
+                        return true;
+                    }
+                }
+                break;
+            case PieceType::Pawn:
+                if (V::pawnCaptureBits(from, opponent(mover())).test(tgtIndex)) {
+                    return true;
+                }
+                // TODO: En passant capture
+                break;
+            }
+        }
+        return false;
+    }
+
     bool isAttacking(Index from, Color, PieceType pt, Index tgt) const;
 
     // ----------------------------------------
 
-    CheckEnum getCheckEnum() const;
-    void recordCheckEnum(CheckEnum checkEnum) const;
+    CheckEnum getCheckEnum() cache_const;
+    void recordCheckEnum(CheckEnum checkEnum) cache_const;
 
     // ----------------------------------------
 
-    OptGameOutcome getOptOutcome() const { return _cache.optOutcome; }
-    void recordOutcome(const GameOutcome& gameOutcome) const;
-    GameOutcome getOutcome() const { return _cache.optOutcome.value(); }
+    OptGameOutcome getOptOutcome() cache_const { return _cache.optOutcome; }
+    void recordOutcome(const GameOutcome& gameOutcome) cache_const;
+    GameOutcome getOutcome() cache_const;
 
     // ----------------------------------------
 
@@ -313,7 +481,7 @@ public:
     // ========================================
     // Move execution
 
-    void moveExec(Move& move);
+    void moveExec(const Move& move);
     void moveRedo(const Move& move);
     void moveUndo(const Move& move);
 
@@ -366,15 +534,20 @@ public:
 
     bool isDrawByStalemate() const;
 
+    CheckEnum getMoveCheckEnum(const Move& move) const;
+
     /// \todo Implement Board::isPinned to support pinning as a board valuation feature
     // bool isPinned(Index tgtInd, Color c) const;
 
     /// \todo Implement pinningIndices to support pinning as a board valuation feature
     // Indices pinnningIndices(Index tgtInd, Color c) const;
 
-    void setMoveCheckEnum(Move& move);
+    void recordMoveCheckEnum(const Move& move, CheckEnum ce) cache_const;
 
 private:
+    const std::string _name;
+    bool _isKingAttackedAfterMove(const Move& mover, Color kColor) const;
+
     // =======================================
     // Piece locations
 
@@ -432,20 +605,26 @@ private:
     ///     they compute this info for games inspected during game tree search.
     struct Cache {
         Cache()
-            : obstructedHexRayMap{},
+            : mhashToCheckEnum{},
+              obstructedHexRayMap{},
               optPseudoLegalMoves{},
               optLegalMoves{},
               optCheckEnum{},
-              optOutcome{}
+              optOutcome{},
+              lastCleared{-1}
         { }
 
-        void clear() {
+        void clear(Short counter) {
+            mhashToCheckEnum.clear();
             obstructedHexRayMap.clear();
             optPseudoLegalMoves = std::nullopt;
             optLegalMoves = std::nullopt;
             optCheckEnum = std::nullopt;
             optOutcome = std::nullopt;
+            lastCleared = counter;
         }
+
+        std::map<MHash, CheckEnum> mhashToCheckEnum;
 
         /// \brief Storage of slides of pieces that are blocked by opponent's pieces.
         ///
@@ -457,14 +636,15 @@ private:
         /// by std::optional, because its computation is not computed in a single
         /// function call, but rather distributed across the construction of the
         /// HexRays of the sliding pieces.
-        ObstructedHexRayMap obstructedHexRayMap{};
+        ObstructedHexRayMap obstructedHexRayMap;
 
-        OptMoves       optPseudoLegalMoves{};
-        OptMoves       optLegalMoves{};
-        OptCheckEnum   optCheckEnum{};
-        OptGameOutcome optOutcome{};
+        OptMoves       optPseudoLegalMoves;
+        OptMoves       optLegalMoves;
+        OptCheckEnum   optCheckEnum;
+        OptGameOutcome optOutcome;
+        Short          lastCleared;
     };
-    mutable Cache _cache{};
+    cache_mutable Cache _cache{};
 };
 
 } // namespace hexchess::core
