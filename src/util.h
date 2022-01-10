@@ -15,12 +15,16 @@
 
 #pragma once
 
+#include <cassert>
+#include <math.h>
+
 #include <algorithm>
+#include <iostream>
+#include <mutex>
 #include <random>
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <math.h>
 
 
 namespace hexchess {
@@ -47,8 +51,10 @@ inline T chooseRandom(const std::vector<T>& collection) {
     static std::random_device dev{"/dev/random"};
     static std::mt19937 prng(dev());
 
-    std::uniform_int_distribution<> randomChoice(0, collection.size());
-    return collection[randomChoice(prng)];
+    std::uniform_int_distribution<> randomChoice(0, collection.size() - 1);
+    int choice = randomChoice(prng);
+    std::cout << "hexchess::chooseRandom: Choosing #" << choice << "\n";
+    return collection[choice];
 }
 
 template <class T, class V>
@@ -73,6 +79,45 @@ const std::vector<T> maxValues(const std::vector<T>& ts, std::function<V(const T
 /// \brief A shorthand version of <utility>'s std::make_pair.
 template <class T1, class T2>
 std::pair<T1,T2> mkPair(T1 x, T2 y) { return std::make_pair(x, y); }
+
+template <typename CharT, typename Traits, typename T>
+std::basic_ostream<CharT, Traits>&
+print(std::basic_ostream<CharT, Traits>& os, T &&t) {
+    return (os << std::forward<T>(t));
+}
+
+template <typename CharT, typename Traits, typename T, typename... Args>
+std::basic_ostream<CharT, Traits>&
+printImpl(std::basic_ostream<CharT, Traits>& os, T &&t) {
+    return (os << std::forward<T>(t));
+}
+
+template <typename CharT, typename Traits, typename T, typename... Args>
+std::basic_ostream<CharT, Traits>&
+printImpl(std::basic_ostream<CharT, Traits>& os, T &&t, Args&&...args) {
+    return printImpl(printImpl(os, std::forward<T>(t)), std::forward<Args>(args)...);
+}
+
+template <typename CharT, typename Traits, typename T, typename... Args>
+std::basic_ostream<CharT, Traits>&
+print(std::basic_ostream<CharT, Traits>& os, T &&t, Args&&...args) {
+    static std::mutex mtx;
+
+    struct timespec now;
+    int retval = clock_gettime(CLOCK_REALTIME, &now);
+    assert(retval == 0);
+    struct tm *tmp;
+    tmp = localtime(&now.tv_sec);
+    unsigned long frac6 = now.tv_nsec / 1'000L;
+    char buffer[50];
+    sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02d.%05lu",
+        1900 + tmp->tm_year, tmp->tm_mon + 1, tmp->tm_mday,
+        tmp->tm_hour, tmp->tm_min, tmp->tm_sec, frac6);
+    std::unique_lock<std::mutex> lock(mtx);
+    os << buffer << ": ";
+    printImpl(os, t, std::forward<Args>(args)...);
+    return os;
+}
 
 /// \brief A string reversal function, used to print bitsets.
 inline std::string reved(const std::string& s) {
