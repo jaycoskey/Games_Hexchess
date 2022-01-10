@@ -31,7 +31,6 @@ using core::Value;
 class Evaluation {
 public:
     static Value value(const Board<Glinski>& b);
-    static Value value_pieceTypes(const Board<Glinski>& b, Color c);
     static Value value_pieceTypes(const Board<Glinski>& b);
 
 private:
