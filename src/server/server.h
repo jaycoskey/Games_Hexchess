@@ -23,60 +23,78 @@
 #include <memory>
 
 #include <QObject>
+#include <QThread>
 
 #include "board.h"
 #include "game_outcome.h"
 #include "player.h"
-#include "player_simple_random.h"
+#include "player_random.h"
 #include "util_hexchess.h"
+#include "variant.h"
 
 
-namespace hexchess::core {
+namespace hexchess::server {
+
+using core::Board;
+using core::Color;
+using core::Fen;
+using core::GameOutcome;
+using core::Index;
+using core::Moves;
 
 using player::Player;
 using player::PlayerRandom;
 
-class Game : public QObject {
+class Server : public QObject {
     Q_OBJECT
-    typedef Glinski V;
+    // typedef Glinski V;
 
 public:
-    Game(bool doPopulate=true);
+    Server();
+    // ~Server();
+    Server(const Server& other);
 
     const GameOutcome& play();
 
-    std::shared_ptr<Player> getPlayer(Color c);
-    void setPlayer1(std::shared_ptr<Player>& p1);
-    void setPlayer2(std::shared_ptr<Player>& p2);
-    const std::string playerName(Color c) const;
+    Player* getPlayer(Color c);
+    void setPlayer1(Player *p1);
+    void setPlayer2(Player *p2);
+    void initializeBoard(const Fen<Glinski>& fen);
+    void initializeBoard(const std::string& fenStr);
 
+    const std::string playerName(Color c) const;
     const std::string game_summary_string() const;
     void load_pgn(const std::string& pgn);
     const std::string game_pgn_string() const;
 
-    Board<V> board;
+    bool getIsGameOver() const { return board.getIsGameOver(); }
+
+    template<typename P1, typename P2>
+    int play(int argc, char *argv[], P1 *p1, P2 *p2);
+
+    Board<Glinski> board;
     GameOutcome outcome;
-    std::shared_ptr<Player> player1;
-    std::shared_ptr<Player> player2;
+    Player *player1;
+    Player *player2;
 
 public slots:
     void receiveActionFromPlayer(Color mover, PlayerAction action);
 
 signals:
     // Boardcast to Players
-    void sendBoardInitializationToPlayers(const Fen<V>& fen);
+    void sendBoardInitializationToPlayers(const Fen<Glinski>& fen);
     void sendCheckToPlayers(Color checked, Index kingInd);
     void sendGameOutcomeToPlayer1(Color reader, const GameOutcome& outcome);
     void sendGameOutcomeToPlayer2(Color reader, const GameOutcome& outcome);
 
     // Sent individually
-    void sendActionRequestToPlayer1(Color mover);
-    void sendActionRequestToPlayer2(Color mover);
+    void sendActionRequestToPlayer1(Color mover, const Moves legalMoves);
+    void sendActionRequestToPlayer2(Color mover, const Moves legalMoves);
 
-    void sendActionToPlayer1(Color mover, PlayerAction& action);
-    void sendActionToPlayer2(Color mover, PlayerAction& action);
+    void sendActionToPlayer1(Color mover, const PlayerAction action);
+    void sendActionToPlayer2(Color mover, const PlayerAction action);
 
-private:
+protected:
     void _announceGameEnd(const GameOutcome &outcome) const;
     void _pgn_tag_parse(const std::string& line);
     void _printGameStats() const;
@@ -94,6 +112,53 @@ private:
     std::string _time;
 
     std::map<std::string, std::string> _otherTags;
+//    QThread *_thread;
 };
 
-}  // namespace hexchess::core
+template<typename SERVER, typename P1, typename P2>
+int play(int argc, char *argv[], SERVER *server, P1 *p1, P2 *p2) {
+    Scope scope{"main.cpp::play"};
+
+    QApplication app(argc, argv);
+    MainWindow mw1{};
+    MainWindow mw2{};
+
+    QThread *thread1 = new QThread;
+    QThread *thread2 = new QThread;
+
+    p1->moveToThread(thread1);
+    p2->moveToThread(thread2);
+
+    connectServerToPlayers(server, p1, p2);
+
+    p1->setGui(&mw1);
+    connectPlayerToGui(p1, p1->gui());
+    p1->showGui();
+
+    p2->setGui(&mw2);
+    connectPlayerToGui(p2, p2->gui());
+    p2->showGui();
+
+    thread1->start();
+    thread2->start();
+
+    server->initializeBoard(Glinski::fenInitial);
+
+    Color firstMover = server->board.mover();
+    if (firstMover == Color::Black) {
+        if (hexchess::events_verbose) {
+            print(cout, scope(), "Calling Server::sendActionRequestToPlayer2\n");
+    }
+        server->sendActionRequestToPlayer2(
+            firstMover, server->board.getLegalMoves(firstMover));
+    } else {
+        if (hexchess::events_verbose) {
+            print(cout, scope(), "Calling Server::sendActionRequestToPlayer1\n");
+        }
+    }
+    server->sendActionRequestToPlayer1(
+        firstMover, server->board.getLegalMoves(firstMover));
+    return app.exec();
+}
+
+}  // namespace hexchess::server
