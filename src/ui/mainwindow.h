@@ -9,6 +9,8 @@
 #ifndef UI_MAINWINDOW_H
 #define UI_MAINWINDOW_H
 
+#include <iostream>
+
 #include <QtCore/QVariant>
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
@@ -26,10 +28,29 @@
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
+#include "fen.h"
+#include "game_outcome.h"
+#include "move.h"
+#include "player_action.h"
+#include "util.h"
+#include "util_hexchess.h"
+
 #include "boardwidget.h"
 
 
 QT_BEGIN_NAMESPACE
+
+using hexchess::NotImplementedException;
+using hexchess::print;
+
+using hexchess::core::Color;
+using hexchess::core::Fen;
+using hexchess::core::GameOutcome;
+using hexchess::core::Index;
+using hexchess::core::Move;
+using hexchess::core::PlayerAction;
+using hexchess::core::PlayerActionEnum;
+using hexchess::core::Scope;
 
 class MainWindow final : public QMainWindow
 {
@@ -40,7 +61,7 @@ public:
     {
         if (objectName().isEmpty()) {
             setObjectName(QString::fromUtf8("MainWindow"));
-	}
+        }
         resize(1400, 800);
         actionNewGame = new QAction();
         actionNewGame->setObjectName(QString::fromUtf8("actionNewGame"));
@@ -283,6 +304,36 @@ public:
         menuActions->setTitle(QApplication::translate("MainWindow", "Actions", nullptr));
         menuHelp->setTitle(QApplication::translate("MainWindow", "Help", nullptr));
     }
+
+public slots:
+    void receiveBoardInitializationFromPlayer(const Fen<Glinski>& fen) {
+        Scope scope{"MainWindow::receiveBoardInitializationFromPlayer", true};
+        boardWidget->initializeBoard(fen);
+    }
+
+    void receiveActionRequestFromPlayer(Color mover) {
+        Scope scope{"MainWindow::displayActionRequest"};
+        // throw NotImplementedException{"MainWindow::displayActionRequest"};
+    }
+
+    void receiveActionFromPlayer(Color mover, const PlayerAction& action) {
+        if (action.playerActionEnum() == PlayerActionEnum::Move) {
+            boardWidget->execMove(action.move());
+        }
+    }
+
+    void receiveCheckFromPlayer(Color checked, Index kingInd) {
+        std::cout << "MainWindow::displayCheck: Entering\n";
+        throw NotImplementedException{"MainWindow::displayCheck"};
+    }
+
+    void receiveGameOutcomeFromPlayer(Color reader, const GameOutcome& gameOutcome) {
+        std::cout << "MainWindow::displayGameOutcome: Entering\n";
+        // throw NotImplementedException{"MainWindow::displayGameOutcome"};
+    }
+
+signals:
+    void sendActionToPlayer(Color mover, const PlayerAction& action);
 };
 
 QT_END_NAMESPACE
