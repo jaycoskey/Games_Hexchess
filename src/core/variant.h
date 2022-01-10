@@ -14,6 +14,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,8 @@ using OptColorPieceType = std::optional<ColorPieceType>;
 
 using PiecesDense = std::vector<std::tuple<Index, Color, PieceType>>;
 using PiecesSparse = std::vector<OptColorPieceType>;
+
+using IndexSet = std::set<Index>;
 
 /// \brief A (possibly empty) ordered sequence of Indices in given direction from
 ///        a starting cell. The sequence does not include the starting cell.
@@ -56,11 +59,19 @@ public:
     HexDir dir() const { return _dir; }
     const Indices indices() const { return _indices; };
 
+    bool contains(Index index) const {
+        for (Index rayInd : _indices) {
+            if (rayInd == index) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 private:
     Index _start;  // For iterating after batch test found obstruction
-    HexDir _dir;  // For iterating after batch test found obstruction
+    HexDir _dir;   // For iterating after batch test found obstruction
     Indices _indices;  // For iterating after batch test found obstruction
-
 };
 
 /// \brief A collection of HexRays, which can be used to represent possible
@@ -97,6 +108,7 @@ public:
 
     /// \brief String describing initial piece placement, and som eother game state info.
     static const std::string fenInitial;
+    static const std::string fenDefault() { return fenInitial; }
 
     /// \brief Order of indices of the board's cells as they are traversed in FEN order
     ///        (left-to-right, then top-down).
