@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <optional>
 
 #include "util_hexchess.h"
@@ -77,18 +78,26 @@ public:
     GameOutcome(Termination term)
         : _termination{term},
           _optWinner{std::nullopt}
-    {}
+    {
+        std::cout << "GameOutcome::GameOutcome (winner=nullopt): _termination="
+                  << termination_string(term) << "\n";
+    }
 
     GameOutcome(Termination term, Color winner)
         : _termination{term},
           _optWinner{std::make_optional(winner)}
-    {}
+    {
+        std::cout << "GameOutcome::GameOutcome (winner!=nullopt): _termination="
+                  << termination_string(term) << "\n";
+    }
 
     bool isDraw() const;
     bool isStalemate() const;
     bool isWin() const;
 
     std::string game_outcome_reader_string(Color reader) const;
+    std::string game_outcome_short_string() const;
+
     std::string game_outcome_score_string() const;
     Score score(Color c) const;
     Termination termination() const { return _termination; }
