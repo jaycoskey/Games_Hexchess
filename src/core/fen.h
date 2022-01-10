@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include <QMetaType>
+
 #include "util_hexchess.h"
 #include "variant.h"
 
@@ -30,6 +32,7 @@ struct Fen {
     static const std::string fen_board_string(const PiecesSparse& pieces, bool verbose=false);
 
     Fen(const std::string& fenStr);
+    Fen() : Fen(V::fenDefault()) { }
 
     Fen(const PiecesSparse& pieces,
         Color c,
@@ -49,7 +52,7 @@ struct Fen {
     // const OptIndex& optEpIndex() const { return _optEpIndex; }
     // const HalfMoveCounter currentCounter() const { return _currentCounter; }
 
-    const std::string fen_string();
+    const std::string fen_string() const;
 
 // private:
     PiecesSparse piecesSparse;
@@ -60,3 +63,5 @@ struct Fen {
 };
 
 }  // namespace hexchess::core
+
+Q_DECLARE_METATYPE(hexchess::core::Fen<hexchess::core::Glinski>);  // Must occur at global scope
