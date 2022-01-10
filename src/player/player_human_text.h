@@ -24,6 +24,8 @@
 #include "player.h"
 #include "variant.h"
 
+#include "ui/mainwindow.h"
+
 
 namespace hexchess::player {
 
@@ -39,34 +41,60 @@ class PlayerHumanText : public Player {
 public:
     typedef Glinski V;
 
-    PlayerHumanText() : _board{false} {}
+    PlayerHumanText() : _board{"PlayerHumanText", false} {}
     virtual ~PlayerHumanText() override {};
 
+    virtual bool isHuman() const override { return true; }
     virtual const std::string name() const override { return _name; }
     virtual void setName(std::string name) override { _name = name; }
 
+    virtual MainWindow* gui() const override { return _gui; }
+    virtual void setGui(MainWindow *mwp) override { cout << "PlayerHumanText::setGui: Entering\n"; _gui = mwp; }
+    virtual void showGui() const override { _gui->show(); }
+
 public slots:
+    // ========================================
+    // Game <--> Player
+
     // Broadcast
-    virtual void initializeBoard(const Fen<V>& fen) override;
-    virtual void showCheckToPlayer(Color checked, Index kingInd) override;
+    virtual void receiveBoardInitializationFromServer(const Fen<V>& fen) override;
+    virtual void receiveCheckFromServer(Color checked, Index kingInd) override;
 
     // Sent individually
-    virtual void showActionRequestToPlayer(Color mover) override;
-    virtual void showActionToPlayer(Color mover, PlayerAction& action) override;
-    virtual void showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) override;
+    virtual void receiveActionRequestFromServer(Color mover, const Moves legalMoves) override;
+    virtual void receiveActionFromServer(Color mover, const PlayerAction action) override;
+    virtual void receiveGameOutcomeFromServer(Color receiver, const GameOutcome& gameOutcome) override;
 
     // TODO: Receive DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Receive "superuser" board edits: addPiece, movePiece, removePiece
 
+    // ========================================
+    // Player <--> GUI
+
+    virtual void receiveActionFromGui(Color mover, const PlayerAction& action) override;
+
 signals:
-    void sendActionToServer(Color mover, PlayerAction action);
+    // ========================================
+    // Game <--> Player
+
+    void sendActionToServer(Color mover, const PlayerAction action);
     // TODO: Send DrawOffer, DrawAcceptance, or DrawDecline
     // TODO: Send "superuser" board edits: addPiece, movePiece, removePiece
 
-private:
+    // ========================================
+    // Player <--> GUI
+    void sendBoardInitializationToGui(const Fen<V>& fen);
+
+    void sendActionRequestToGui(Color mover, const Moves legalMoves);
+    void sendActionToGui(Color mover, const PlayerAction action);
+    void sendCheckToGui(Color checked, Index kingInd);
+    void sendGameOutcomeToGui(Color receiver, const GameOutcome& gameOutcome);
+
+protected:
     static const std::string _helpMessage;
 
     Board<Glinski> _board;
+    MainWindow* _gui;
     std::string _name;
 };
 
