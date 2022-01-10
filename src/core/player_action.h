@@ -58,12 +58,13 @@ public:
           _optMove{std::make_optional(move)}
     { }
 
-    PlayerActionEnum playerActionEnum() { return _playerActionEnum; }
+    PlayerActionEnum playerActionEnum() const { return _playerActionEnum; }
+    bool isMove() const { return _playerActionEnum == PlayerActionEnum::Move; }
 
-    Move& move() { return _optMove.value(); }
+    const Move& move() const { return _optMove.value(); }
 
-    std::string player_action_string(bool doChecks) {
-        return player_action_enum_string(_playerActionEnum) + ": "
+    std::string player_action_string(bool doChecks) const {
+        return player_action_enum_string(_playerActionEnum) + "-"
                    + (_optMove.has_value()
                          ? _optMove.value().move_pgn_string(doChecks)
                          : "NoMove");
