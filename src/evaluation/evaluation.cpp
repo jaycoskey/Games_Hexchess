@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <iostream>
 #include <map>
 
 #include "board.h"
@@ -20,6 +21,8 @@
 #include "game_outcome.h"
 #include "util_hexchess.h"
 #include "variant.h"
+
+using std::cout;
 
 using std::map;
 
@@ -30,31 +33,37 @@ using core::Color;
 using core::GameOutcome;
 using core::Glinski;
 using core::PieceType;
+using core::Scope;
 using core::Value;
 
 using core::negInfinity;
 using core::posInfinity;
 
+
+Value colorMult(Color c) {
+    return c == Color::White ? 1 : -1;
+}
+
 /// Glinski: Q:10, R:5, B:3, N:4
 /// Roczniak: Q6.660, R:4.460, B:2.6, N:2.3
 const map<PieceType, Value> Evaluation::_pieceTypeToValue {
-    {PieceType::Queen,  6'660},
-    {PieceType::Rook,   4'460},
-    {PieceType::Bishop, 2'600},
-    {PieceType::Knight, 2'300}
+    {PieceType::King,  1'000'000},
+    {PieceType::Queen,     6'660},
+    {PieceType::Rook,      4'460},
+    {PieceType::Bishop,    2'600},
+    {PieceType::Knight,    2'300},
+    {PieceType::Pawn,      1'000}
 };
 
-Value Evaluation::value_pieceTypes(const Board<Glinski>& b, Color c) {
-    Value result = b.queenCount(c)  * _pieceTypeToValue.at(PieceType::Queen)
-                 + b.rookCount(c)   * _pieceTypeToValue.at(PieceType::Rook)
-                 + b.bishopCount(c) * _pieceTypeToValue.at(PieceType::Bishop)
-                 + b.knightCount(c) * _pieceTypeToValue.at(PieceType::Knight)
-                 + b.pawnCount(c)   * _pieceTypeToValue.at(PieceType::Pawn);
-    return result;
-}
-
 Value Evaluation::value_pieceTypes(const Board<Glinski>& b) {
-    return value_pieceTypes(b, Color::White) - value_pieceTypes(b, Color::Black);
+    Scope scope{"Evaluation::value_pieceTypes"};
+
+    Value result = 0;
+    for (auto [from, c, pt] : b.piecesDense()) {
+        // print(cout, scope(), "c=", c, ", pt=", pt, "\n");
+        result += colorMult(c) * _pieceTypeToValue.at(pt);
+    }
+    return result;
 }
 
 // \todo: Chess evaluation starter pack:
