@@ -20,7 +20,7 @@
 #include "board.h"
 #include "move.h"
 #include "player.h"
-#include "player_simple_advancing.h"
+#include "player_preference.h"
 #include "variant.h"
 
 using std::cout;
@@ -29,17 +29,18 @@ using hexchess::core::Board;
 using hexchess::core::Glinski;
 using hexchess::core::Move;
 using hexchess::core::PieceType;
+using hexchess::core::PlayerAction;
 
-using hexchess::player::PlayerAction;
-using hexchess::player::PlayerAdvancing;
+using hexchess::player::rowsAdvanced;
+using hexchess::player::PlayerPreference;
 
 /// As of 2021-08-19, fails with NotImplementedException (Board<V>::getLegalMoves(Color)
 #ifdef NOTYET
 // TODO: Modify Player*'s signal/slot methods to be more testable
-TEST(PlayerTest, PlayerAdvancing) {
+TEST(PlayerTest, PlayerPreference_Advancing) {
     bool verbose = false;
 
-    PlayerAdvancing player{};
+    PlayerPreference player{rowsAdvanced};
     PlayerAction nextAction = player.getNextAction(Glinski::fenInitial);
 
     // Bishops can advance furthest on first move

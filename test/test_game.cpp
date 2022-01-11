@@ -19,10 +19,10 @@
 #include <gtest/gtest.h>
 
 #include "board.h"
-#include "game.h"
 #include "game_outcome.h"
 #include "player.h"
-#include "player_simple_random.h"
+#include "player_random.h"
+#include "server.h"
 #include "util.h"
 #include "util_hexchess.h"
 
@@ -31,29 +31,27 @@ using std::string;
 
 using hexchess::core::Board;
 using hexchess::core::Color;
-using hexchess::core::Game;
 using hexchess::core::GameOutcome;
 
 using hexchess::player::Player;
 using hexchess::player::PlayerRandom;
 
+using hexchess::server::Server;
 
-/// As of 2021-08-19, fails with NotImplementedException (Game::play())
-TEST(GameTest, GameBasic) {
+
+/// As of 2021-08-19, fails with NotImplementedException
+TEST(ServerTest, ServerBasic) {
     bool verbose = false;
+    using PR = PlayerRandom;
 
-    std::shared_ptr<Player> player1 = std::make_shared<PlayerRandom>();
-    std::shared_ptr<Player> player2 = std::make_shared<PlayerRandom>();
+    PR p1{};
+    PR p2{};
 
-    Game g{false};
-    g.setPlayer1(player1);
-    g.setPlayer2(player2);
+    Server server{};
+    server.setPlayer1(dynamic_cast<Player*>(&p1));
+    server.setPlayer2(dynamic_cast<Player*>(&p2));
+    server.initializeBoard(Glinski::fenInitial);
 
-    // TODO: Re-implement to interact with slot/signal design of Player classes.
-    // const GameOutcome& outcome = g.play();
-    // assert(outcome == g.outcome);
-    // cout << "Game ended after " << g.board.currentCounter() << " moves.\n";
-    // cout << g.game_summary_string() << "\n";
-    // cout << g.pgn_string() << "\n";
-    // cout << g.game_summary_string() << "\n";
+    // TODO: Run complete game. Check outcome.
+    // TODO: Run 100 games: AlphaBeta vs Random. Assert that AlphaBeta never loses.
 }

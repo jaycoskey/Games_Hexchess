@@ -13,7 +13,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <iostream>
+
 #include <gtest/gtest.h>
+
+#include "board.h"
+#include "move.h"
+#include "util_hexchess.h"
+#include "variant.h"
+
+using std::cout;
+
+using hexchess::core::Board;
+using hexchess::core::Color;
+using hexchess::core::Glinski;
+using hexchess::core::Move;
+using hexchess::core::Moves;
+using hexchess::core::PieceType;
+using hexchess::core::Size;
 
 
 int main(int argc, char *argv[]) {

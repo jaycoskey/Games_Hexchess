@@ -35,6 +35,7 @@ using hexchess::core::Index;
 using hexchess::core::Indices;
 using hexchess::core::Move;
 using hexchess::core::Moves;
+using hexchess::core::PieceType;
 using hexchess::core::Short;
 using hexchess::core::Size;
 
@@ -64,80 +65,111 @@ Short move_count_slider(const vector<HexRays<Glinski>>& slideRayTable, bool verb
 }
 
 /// \brief Test: Test the count of all King moves over all starting points.
+///
+///     Kings @ inner 37 cells have 12 moves each (444)
+///     Next layer: 18*11 + 6 * 10 (= 258)
+///     Outermost layer: 24 * 7 + 6 * 5 (= 198)
 TEST(MoveTest, MoveCountKing) {
-    bool verbose = false;
+    bool verbose = true;
 
     Short move_count = move_count_leaper(Glinski::kingDests, verbose);
-
     if (verbose) {
         cout << "King:   Move count = " << move_count << "\n";
     }
-    // TODO: ASSERT_EQ(move_count, ??);
+    ASSERT_EQ(move_count, 900);
 }
 
 /// \brief Test: Test the count of all Queen moves over all starting points.
 TEST(MoveTest, MoveCountQueen) {
-    bool verbose = false;
+    bool verbose = true;
 
     Short move_count = move_count_slider(Glinski::queenRays, verbose);
-
     if (verbose) {
         cout << "Queen:  Move count = " << move_count << "\n";
     }
-    // TODO: ASSERT_EQ(move_count, ??);
+    ASSERT_EQ(move_count, 900);
 }
 
 /// \brief Test: Test the count of all Rook moves over all starting points.
 TEST(MoveTest, MoveCountRook) {
-    bool verbose = false;
+    bool verbose = true;
 
     Short move_count = move_count_slider(Glinski::rookRays, verbose);
-
     if (verbose) {
         cout << "Rook:   Move count = " << move_count << "\n";
     }
-    // TODO: ASSERT_EQ(move_count, ??);
+    ASSERT_EQ(move_count, 480);
 }
 
 /// \brief Test: Test the count of all Bishop moves over all starting points.
 TEST(MoveTest, MoveCountBishop) {
-    bool verbose = false;
+    bool verbose = true;
 
     Short move_count = move_count_slider(Glinski::bishopRays, verbose);
-
     if (verbose) {
         cout << "Bishop: Move count = " << move_count << "\n";
     }
-    // TODO: ASSERT_EQ(move_count, ??);
+    ASSERT_EQ(move_count, 420);
 }
 
 /// \brief Test: Test the count of all Knight moves over all starting points.
+///
+/// Knights at innermost 19 (1+6+12) cells have 12 moves each (=228)
+///     Next layer (18 cells): 12 * 10 + 6 * 8 (=168)
+///     Next layer (24 cells): 6 * 8 + 12 * 7 + 6 * 6  (=168)
+///     Outermost layer (30 cells): 12 * 6 + 12 * 5 + 6 * 4 (=156)
 TEST(MoveTest, MoveCountKnight) {
-    bool verbose = false;
+    bool verbose = true;
 
     Short move_count = 0;
     for (Index index = 0; index < Glinski::CELL_COUNT; ++index) {
         move_count += Glinski::knightDests[index].size();
     }
-    // TODO: ASSERT_EQ(move_count, ??);
+    if (verbose) {
+        cout << "Knight move count=" << move_count << "\n";
+    }
+    ASSERT_EQ(move_count, 720);
 }
 
 /// \brief Test: Test the count of all legal starting moves.
 TEST(MoveTest, MoveCountBoard) {
     bool verbose = true;
 
-    Board<Glinski> b{};  // Initial game layout
-    Moves bMoves = b.getLegalMoves(Color::Black);
+    Board<Glinski> b{"Test_MoveCountBoard", false};  // Initial game layout
+    b.initialize(Glinski::fenInitial);
     Moves wMoves = b.getLegalMoves(Color::White);
-
-    Size kCount = 2;
-    Size qCount = 6;
-    Size rCount = 6;
-    Size bCount = 12;
-    Size nCount = 8;
-    Size pCount = 17;
-    Size expectedCount = kCount + qCount + rCount
-                       + bCount + nCount + pCount;
-    ASSERT_EQ(bMoves.size(), expectedCount);
+    Size kCount = 0;
+    Size qCount = 0;
+    Size rCount = 0;
+    Size bCount = 0;
+    Size nCount = 0;
+    Size pCount = 0;
+    for (const Move& move : wMoves) {
+        switch (move.pieceType()) {
+            case PieceType::King:   kCount++; break;
+            case PieceType::Queen:  qCount++; break;
+            case PieceType::Rook:   rCount++; break;
+            case PieceType::Bishop: bCount++; break;
+            case PieceType::Knight: nCount++; break;
+            case PieceType::Pawn:   pCount++; break;
+            default: break;
+        }
+    }
+    Size kExp = 2;  ASSERT_EQ(kCount, kExp);
+    Size qExp = 6;  ASSERT_EQ(qCount, qExp);
+    Size rExp = 6;  ASSERT_EQ(rCount, rExp);
+    Size bExp = 12; ASSERT_EQ(bCount, bExp);
+    Size nExp = 8;  ASSERT_EQ(nCount, nExp);
+    Size pExp = 17; ASSERT_EQ(pCount, pExp);
+    if (verbose) {
+        cout << "Initial King moves="   << kCount << ((kCount == kExp) ? "" : "!= expected\n");
+        cout << "Initial Queen moves="  << qCount << ((qCount == qExp) ? "" : "!= expected\n");
+        cout << "Initial Rook moves="   << rCount << ((rCount == rExp) ? "" : "!= expected\n");
+        cout << "Initial Bishop moves=" << bCount << ((bCount == bExp) ? "" : "!= expected\n");
+        cout << "Initial Knight moves=" << nCount << ((nCount == nExp) ? "" : "!= expected\n");
+        cout << "Initial Pawn moves="   << pCount << ((pCount == pExp) ? "" : "!= expected\n");
+    }
+    Size expectedCount = kExp + qExp + rExp
+                       + bExp + nExp + pExp;
     ASSERT_EQ(wMoves.size(), expectedCount);
 }

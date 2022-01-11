@@ -48,7 +48,7 @@ using hexchess::core::Short;
 
 /// \brief Test: For each Player, the Bishop starting positions have three different cell shades.
 TEST(BoardTest, BoardBishopShades) {
-    Board<Glinski> b{};
+    Board<Glinski> b{"Test_BoardBishopShades", true};
 
     for (Color c : {Color::Black, Color::White}) {
         vector<Index> bishopCellIndices{};
@@ -85,7 +85,7 @@ TEST(BoardTest, BoardBishopShades) {
 ///
 /// For more information on Forsyth-Edwards Notation (FEN), see Wikipedia.
 TEST(BoardTest, BoardFen) {
-    Board<Glinski> b{};
+    Board<Glinski> b{"Test_BoardFen", true};
     string fen_init = decltype(b)::V::fenInitial;
     string fen_derived = b.fen_string();
     ASSERT_EQ(fen_init, fen_derived);
@@ -121,7 +121,7 @@ TEST(BoardTest, BoardKnightMoves) {
 TEST(BoardTest, BoardPieceCount) {
     bool verbose = false;
 
-    Board<Glinski> b{};
+    Board<Glinski> b{"Test_BoardPieceCount", true};
 
     for (Color c : {Color::Black, Color::White}) {
         if (verbose) {
@@ -147,7 +147,7 @@ TEST(BoardTest, BoardPieceCount) {
 
 /// \brief Calls to addPiece and removePiece work as expected.
 TEST(BoardTest, BoardPiecePlacement) {
-    Board<Glinski> b{};
+    Board<Glinski> b{"Test_BoardPiecePlacement", true};
     Index centerIndex = 45;
     ASSERT_TRUE(b.isEmpty(centerIndex));
 
