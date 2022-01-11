@@ -42,7 +42,6 @@ string termination_string(Termination t) {
             "insufficient resources (i.e., pieces left cannot force a checkmate)" },
         { Termination::Draw_Stalemate,    "stalemate" }
     };
-    assert(t != Termination::None);
     return t2s[t];
 }
 
