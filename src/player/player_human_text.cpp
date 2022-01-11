@@ -15,6 +15,7 @@
 
 #include <cctype>
 
+#include <functional>
 #include <iostream>
 #include <string>
 
@@ -73,23 +74,45 @@ const string PlayerHumanText::_helpMessage =
     "\thelp\n"
     "\t\tPrints this help message.\n";
 
-void PlayerHumanText::initializeBoard(const Fen<V>& fen) {
+void PlayerHumanText::receiveBoardInitializationFromServer(const Fen<V>& fen) {
+    Scope scope{"PlayerHumanText::receiveBoardInitializationFromServer"};
+
     _board.initialize(fen);
-    cout << _board.board_string() << "\n";
+    if (_gui) {
+        if (hexchess::events_verbose) {
+            print(cout, scope(), "PlayerHumanText::receiveBoardInitializationFromServer: Sending board initialization to MainWindow\n");
+        }
+        sendBoardInitializationToGui(fen);
+    }
 }
-void PlayerHumanText::showCheckToPlayer(Color checked, Index kingInd) {
-    cout << checked << " is in check\n";
+void PlayerHumanText::receiveCheckFromServer(Color checked, Index kingInd) {
+    Scope scope{"PlayerHumanText::receiveCheckFromServer"};
+
+    cout << color_long_string(checked) << " is in check\n";
+    if (_gui) {
+        if (hexchess::events_verbose) {
+            print(cout, scope(), "PlayerHumanText::receiveBoardInitializationFromServer: Sending Check to MainWindow\n");
+        }
+        sendCheckToGui(checked, kingInd);
+    }
 }
 
-void PlayerHumanText::showGameOutcomeToPlayer(Color reader, const GameOutcome& gameOutcome) {
-    cout << gameOutcome.game_outcome_reader_string(reader) << "\n";
+void PlayerHumanText::receiveGameOutcomeFromServer(Color receiver, const GameOutcome& gameOutcome) {
+    Scope scope{"PlayerHumanText::receiveGameOutcomeFromServer"};
+
+    cout << gameOutcome.game_outcome_reader_string(receiver) << "\n";
+    if (_gui) {
+        if (hexchess::events_verbose) {
+            print(cout, scope(), "PlayerHumanText::receiveBoardInitializationFromServer: Sending GameOutcome to MainWindow\n");
+        }
+        sendGameOutcomeToGui(receiver, gameOutcome);
+    }
 }
 
-void PlayerHumanText::showActionRequestToPlayer(Color mover) {
-    cout << mover << " to move.\n";
-    Moves legalMoves = _board.getLegalMoves(mover);
-
-    cout << _board.board_string();
+// Note: ActionRequest not forwarded to GUI for this text-based player
+void PlayerHumanText::receiveActionRequestFromServer(Color mover, const Moves legalMoves) {
+    Scope scope{"PlayerHumanText::receiveActionRequestFromServer"};
+    print(cout, scope(), "[mover=", mover, "]: Board:\n", _board.board_string());
 
     while (true) {
         cout << "Enter move (e.g., \"b1 b3\"), \"draw\", \"resign\", \"moves\", or \"help\": ";
@@ -159,27 +182,42 @@ void PlayerHumanText::showActionRequestToPlayer(Color mover) {
     }
 }
 
-void PlayerHumanText::showActionToPlayer(Color mover, PlayerAction& action) {
+void PlayerHumanText::receiveActionFromServer(Color mover, const PlayerAction action) {
+    Scope scope{"PlayerHumanText::receiveActionFromServer"};
+
     switch(action.playerActionEnum()) {
     case PlayerActionEnum::Move:
+        print(cout, scope(), ", counter=", _board.currentCounter(), ". Board:\n", _board.board_string());
+        print(cout, scope(), ", counter=", _board.currentCounter(), ". Calling moveExec\n");
         _board.moveExec(action.move());
-        cout << _board.board_string() << "\n";
+        print(cout, scope(), ", counter=", _board.currentCounter(), ". Caching legal moves\n");
+        (void) _board.getLegalMoves(_board.mover());
+        print(cout, scope(), ", counter=", _board.currentCounter(), ". getting CheckEnum\n");
+        (void) _board.getCheckEnum();
         break;
     case PlayerActionEnum::Draw_Offer:
-        throw NotImplementedException{"PlayerHumanText::showActionToPlayer - Draw_Offer"};
+        throw NotImplementedException{"PlayerHumanText::receiveActionFromServer - Draw_Offer"};
         break;
     case PlayerActionEnum::Draw_Accept:
-        throw NotImplementedException{"PlayerHumanText::showActionToPlayer - Draw_Accept"};
+        throw NotImplementedException{"PlayerHumanText::receiveActionFromServer - Draw_Accept"};
         // TODO: Implement
         break;
     case PlayerActionEnum::Draw_Decline:
-        throw NotImplementedException{"PlayerHumanText::showActionToPlayer - Draw_Decline"};
+        throw NotImplementedException{"PlayerHumanText::receiveActionFromServer - Draw_Decline"};
         // TODO: Implement
         break;
     case PlayerActionEnum::Resign:
         cout << "Your opponent resigned\n";
         break;
     }
+    if (_gui) { sendActionToGui(mover, action); }
 }
+
+void PlayerHumanText::receiveActionFromGui(Color mover, const PlayerAction& action) {
+    // This is a human text player; it should not receive actions from the GUI.
+    throw std::logic_error{"PlayerAlphaBeta, a computer player, should not receive player actions from the GUI"};
+}
+
+// ****************************************
 
 }  // namespace hexchess::player
