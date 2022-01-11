@@ -4,7 +4,7 @@
 
 TEMPLATE = app
 TARGET = hexchess
-INCLUDEPATH += core evaluation player ui
+INCLUDEPATH += core evaluation player server testlib ui
 
 # The following define makes your compiler warn you if you use any
 # feature of Qt which has been marked as deprecated (the exact warnings
@@ -17,12 +17,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-QT += gui svg widgets
-QMAKE_CXX = g++
+QT += concurrent gui svg testlib widgets
+QMAKE_CXX = clang++
 QMAKE_CXXFLAGS += -std=c++2a -g -fPIC
+_LIBCPP_DEBUG = 1
 
 # The flag -fstandalone-debug is only supported clang++, but not g++
-# QMAKE_CXXFLAGS += -fstandalone-debug
+QMAKE_CXXFLAGS += -fstandalone-debug
 
 QMAKE_CXXFLAGS_WARN_ONE = -Werror -Wno-error=unused-parameter
 MOC_DIR = obj
@@ -32,20 +33,20 @@ DESTDIR = obj
 HEADERS += \
     util.h version.h \
     \
-    core/board.h core/fen.h core/game.h \
-    core/game_outcome.h core/geometry.h core/move.h \
-    core/player_action.h core/util_hexchess.h core/variant.h \
-    core/zobrist.h \
+    core/board.h core/fen.h core/game_outcome.h \
+    core/geometry.h core/move.h core/player_action.h \
+    core/util_hexchess.h core/variant.h core/zobrist.h \
     \
     evaluation/evaluation.h \
     \
     player/player.h \
     player/player_alpha_beta.h \
     player/player_human_text.h \
-    player/player_simple_advancing.h \
-    player/player_simple_attacking.h \
-    player/player_simple_random.h \
+    player/player_preference.h \
+    player/player_random.h \
     player/search.h \
+    \
+    server/server.h server/server_thread.h \
     \
     ui/boardwidget.h ui/mainwindow.h \
     ui/stylecolor.h ui/stylefont.h ui/styleicon.h ui/stylemeasure.h \
@@ -55,7 +56,6 @@ SOURCES += main.cpp \
     \
     core/board.cpp \
     core/fen.cpp \
-    core/game.cpp \
     core/game_outcome.cpp \
     core/geometry.cpp \
     core/move.cpp \
@@ -69,10 +69,11 @@ SOURCES += main.cpp \
     \
     player/player_alpha_beta.cpp \
     player/player_human_text.cpp \
-    player/player_simple_advancing.cpp \
-    player/player_simple_attacking.cpp \
-    player/player_simple_random.cpp \
+    player/player_preference.cpp \
+    player/player_random.cpp \
     player/search.cpp \
+    \
+    server/server.cpp \
     \
     ui/boardwidget.cpp \
     ui/stylecolor.cpp ui/styleicon.cpp ui/stylemeasure.cpp \
