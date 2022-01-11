@@ -141,16 +141,16 @@ Fen<Glinski>::Fen(const string& s) {
 // Instance method(s)
 
 template<>
-const string Fen<Glinski>::fen_string() {
+const string Fen<Glinski>::fen_string() const {
     std::ostringstream oss;
 
     assert(piecesSparse.size() == V::CELL_COUNT);
     oss << Fen<V>::fen_board_string(piecesSparse) << " "
         << (mover == Color::Black ? 'b' : 'w') << " "
         << "- "  /* \todo Support for castling */
-        << (optEpIndex != std::nullopt
-               ? Glinski::cellName(optEpIndex.value())
-               : "-")
+        << (optEpIndex == std::nullopt
+               ? "-"
+               : Glinski::cellName(optEpIndex.value()))
         << " "
         << currentCounter + 1 << " "  // currentCounter is zero-based
         << (currentCounter + 2) / 2

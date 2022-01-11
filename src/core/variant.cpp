@@ -299,7 +299,6 @@ const map<Color, map<Index, Indices>> Glinski::colorToPawnCaptureIndices = []() 
     return result;
 }();
 
-/// \todo Implement Glinski::colorToPawnCaptureBits
 const map<Color, map<Index, Glinski::Bits>> Glinski::colorToPawnCaptureBits = []() {
     map<Color, map<Index, Glinski::Bits>> result{};
 
