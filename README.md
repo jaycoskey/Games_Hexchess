@@ -64,4 +64,29 @@ For those who would like to play hexagonal chess:
   * There is also a ["tabletop" version](https://steamcommunity.com/sharedfiles/filedetails/?id=262803646)
     available.
 
+Implementation details:
+  * Board instances owned by:
+    * Server
+    * Player
+    * Board
+  * Communication channels:
+    * Server <--> Player
+    * Player <--> GUI
+  * Signals passed
+    * Player to Server:
+      * Action
+    * Server to Player:
+      * ActionRequest
+      * BoardInitialization
+      * Check
+      * TODO: Checkmate
+      * GameOutcome
+    * GUI to Player
+      * Action
+    * Player to GUI
+      * ActionRequest
+      * BoardInitialiaztion
+      * Check
+      * GameOutcome
+
 Those who are interested in contributing should see the [CONTIBUTING.md](./CONTRIBUTING.md) file.
