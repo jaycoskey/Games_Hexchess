@@ -28,6 +28,7 @@ using std::string;
 
 namespace hexchess {
     bool events_verbose = false;
+    bool general_verbose = false;
 }
 
 
@@ -68,6 +69,16 @@ const string piece_type_string(PieceType pt) {
         { PieceType::Pawn,   "P" }
     };
     return pt2s[pt];
+}
+
+bool isLeaper(PieceType pt) {
+    return pt == PieceType::King
+        || pt == PieceType::Knight;
+}
+bool isSlider(PieceType pt) {
+    return pt == PieceType::Queen
+        || pt == PieceType::Rook
+        || pt == PieceType::Bishop;
 }
 
 /// \brief Return piece indicated character from FEN string
